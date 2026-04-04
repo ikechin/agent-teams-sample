@@ -3,67 +3,110 @@
 ## 概要
 開発を進めるうえで遵守すべき標準ルールを定義します。
 
+このプロジェクトは**マイクロサービスアーキテクチャ**を採用しており、複数のサービスが協調して動作します。
+各サービスは独立したドキュメント構造を持ちつつ、このルートCLAUDE.mdの規則を継承します。
+
+## マイクロサービス構成
+
+### サービス一覧
+- **frontend**: ユーザーインターフェース（Next.js/React）
+- **bff**: Backend for Frontend（API Gateway）
+- **backend**: ビジネスロジック・データ管理
+
+### Agent分担（Agent Teams運用時）
+- **Orchestrator Agent**: 全体調整、ルートの`docs/`と`.steering/`を管理
+- **Frontend Agent**: `services/frontend/`を担当
+- **BFF Agent**: `services/bff/`を担当
+- **Backend Agent**: `services/backend/`を担当
+- **QA/Security Agent**: 横断的な品質・セキュリティチェック（J-SOX対応含む）
+
+### Agent間の協調ルール
+1. **契約ファーストアプローチ**: API契約は`contracts/`で一元管理し、各Agentが参照
+2. **用語統一**: `docs/glossary.md`の用語を全Agentが遵守
+3. **横断的要件**: J-SOX、セキュリティ要件は`docs/`で定義し、各サービスで実装
+4. **変更影響分析**: 1つのサービス変更が他サービスに影響する場合、ルートの`.steering/`で調整
+5. **並行開発**: 各Agentは独立して作業可能だが、定期的に統合確認
+
 ## プロジェクト構造
 
 ### ドキュメントの分類
 
-#### 1. 永続的ドキュメント（`docs/`）
+#### 1. ルート永続的ドキュメント（`docs/`）
 
-アプリケーション全体の「**何を作るか**」「**どう作るか**」を定義する恒久的なドキュメント。
-アプリケーションの基本設計や方針が変わらない限り更新されません。
+**マイクロサービス全体**の「**何を作るか**」「**どう作るか**」を定義する恒久的なドキュメント。
+全サービスに共通する設計や方針を記述し、各Agentが参照します。
 
-- **product-requirements.md** - プロダクト要求定義書
+- **product-requirements.md** - システム全体のプロダクト要求定義書
   - プロダクトビジョンと目的
   - ターゲットユーザーと課題・ニーズ
-  - 主要な機能一覧
+  - 主要な機能一覧（サービス横断的な機能）
   - 成功の定義
   - ビジネス要件
   - ユーザーストーリー
   - 受け入れ条件
-  - 機能要件
-  - 非機能要件
+  - 非機能要件（全体）
 
-- **functional-design.md** - 機能設計書
-  - 機能ごとのアーキテクチャ
-  - システム構成図
-  - データモデル定義（ER図含む）
-  - コンポーネント設計
-  - ユースケース図、画面遷移図、ワイヤフレーム
-  - API設計（将来的にバックエンドと連携する場合）
+- **system-architecture.md** - システムアーキテクチャ設計書
+  - マイクロサービス全体構成図
+  - サービス間通信方式
+  - インフラ構成
+  - デプロイ戦略
+  - スケーリング方針
 
-- **architecture.md** - 技術仕様書
-  - テクノロジースタック
-  - 開発ツールと手法
-  - 技術的制約と要件
-  - パフォーマンス要件
-
-- **repository-structure.md** - リポジトリ構造定義書
-  - フォルダ・ファイル構成
-  - ディレクトリの役割
-  - ファイル配置ルール
-
-- **development-guidelines.md** - 開発ガイドライン
-  - コーディング規約
-  - 命名規則
-  - スタイリング規約
-  - テスト規約
-  - Git規約
-
-- **glossary.md** - ユビキタス言語定義
-  - ドメイン用語の定義
+- **glossary.md** - ユビキタス言語定義（全サービス共通）
+  - ドメイン用語の定義（加盟店、契約、サービス等）
   - ビジネス用語の定義
-  - UI/UX用語の定義
   - 英語・日本語対応表
   - コード上の命名規則
 
+- **jsox-compliance.md** - J-SOX対応設計書
+  - 監査証跡設計
+  - 職務分掌設計
+  - アクセス制御設計
+  - データ保護設計
+  - 承認フロー設計
 
-#### 2. 作業単位のドキュメント（`.steering/[YYYYMMDD]-[開発タイトル]/`）
+- **security-guidelines.md** - セキュリティガイドライン
+  - 認証・認可方式
+  - データ暗号化方針
+  - セキュリティベストプラクティス
+
+- **service-contracts.md** - サービス間API契約方針
+  - API契約管理方法（OpenAPI等）
+  - バージョニング戦略
+  - 後方互換性ポリシー
+
+#### 2. サービス別永続的ドキュメント（`services/{service}/docs/`）
+
+各サービス固有の設計を定義します。
+
+- **functional-design.md** - サービス固有の機能設計書
+  - コンポーネント設計
+  - データモデル（サービス固有）
+  - UI設計（frontendの場合）
+  - API設計（bff/backendの場合）
+
+- **repository-structure.md** - サービス内のリポジトリ構造
+  - フォルダ・ファイル構成
+  - ディレクトリの役割
+
+- **development-guidelines.md** - サービス固有の開発ガイドライン
+  - コーディング規約
+  - テスト規約
+  - ルートの`docs/security-guidelines.md`や`docs/jsox-compliance.md`の実装方法
+
+
+#### 3. 作業単位のドキュメント（`.steering/[YYYYMMDD]-[開発タイトル]/`）
 
 特定の開発作業における「**今回何をするか**」を定義する一時的なステアリングファイル。
 作業完了後は参照用として保持されますが、新しい作業では新しいディレクトリを作成します。
 
+**ルートのステアリング（`.steering/`）**: 複数サービスにまたがる作業の場合
+**サービス別ステアリング（`services/{service}/.steering/`）**: サービス内完結の作業の場合
+
 - **requirements.md** - 今回の作業の要求内容
   - 変更・追加する機能の説明
+  - 影響するサービス（マイクロサービス横断の場合）
   - ユーザーストーリー
   - 受け入れ条件
   - 制約事項
@@ -71,13 +114,16 @@
 - **design.md** - 変更内容の設計
   - 実装アプローチ
   - 変更するコンポーネント
+  - API契約の変更（ある場合）
   - データ構造の変更
-  - 影響範囲の分析
+  - 影響範囲の分析（サービス間影響含む）
 
-- **tasklist.md** - タスクリスト
+- **tasklist.md** - タスクリスト（Agent別に分担）
   - 具体的な実装タスク
+  - 担当Agent（Frontend/BFF/Backend）
   - タスクの進捗状況
   - 完了条件
+  - Agent間の依存関係
 
 ### ステアリングディレクトリの命名規則
 
@@ -93,29 +139,42 @@
 
 ## 開発プロセス
 
-### 初回セットアップ時の手順
+### 初回セットアップ時の手順（マイクロサービス）
 
 #### 1. フォルダ作成
 ```bash
-mkdir -p docs
-mkdir -p .steering
+mkdir -p docs .steering contracts/openapi contracts/types
+mkdir -p services/{frontend,bff,backend}/{docs,.steering}
 ```
 
-#### 2. 永続的ドキュメント作成（`docs/`）
+#### 2. ルート永続的ドキュメント作成（`docs/`）
 
-アプリケーション全体の設計を定義します。
+マイクロサービス全体の設計を定義します。
 各ドキュメントを作成後、必ず確認・承認を得てから次に進みます。
 
-1. `docs/product-requirements.md` - プロダクト要求定義書
-2. `docs/functional-design.md` - 機能設計書
-3. `docs/architecture.md` - 技術仕様書
-4. `docs/repository-structure.md` - リポジトリ構造定義書
-5. `docs/development-guidelines.md` - 開発ガイドライン
-6. `docs/glossary.md` - ユビキタス言語定義
+1. `docs/product-requirements.md` - システム全体のプロダクト要求定義書
+2. `docs/system-architecture.md` - システムアーキテクチャ設計書
+3. `docs/glossary.md` - ユビキタス言語定義
+4. `docs/jsox-compliance.md` - J-SOX対応設計書
+5. `docs/security-guidelines.md` - セキュリティガイドライン
+6. `docs/service-contracts.md` - サービス間API契約方針
 
 **重要：** 1ファイルごとに作成後、必ず確認・承認を得てから次のファイル作成を行う
 
-#### 3. 初回実装用のステアリングファイル作成
+#### 3. サービス別CLAUDE.mdとドキュメント作成
+
+各サービスにCLAUDE.mdと設計ドキュメントを作成します。
+
+1. `services/frontend/CLAUDE.md` - Frontend開発ルール
+2. `services/frontend/docs/functional-design.md` - Frontend機能設計
+3. `services/frontend/docs/repository-structure.md`
+4. `services/frontend/docs/development-guidelines.md`
+
+同様に`bff`と`backend`にも作成します。
+
+**重要：** 各サービスのCLAUDE.mdはルートのCLAUDE.mdを継承する形で記述
+
+#### 4. 初回実装用のステアリングファイル作成
 
 初回実装用のディレクトリを作成し、実装に必要なドキュメントを配置します。
 
@@ -124,17 +183,41 @@ mkdir -p .steering/[YYYYMMDD]-initial-implementation
 ```
 
 作成するドキュメント：
-1. `.steering/[YYYYMMDD]-initial-implementation/requirements.md` - 初回実装の要求
-2. `.steering/[YYYYMMDD]-initial-implementation/design.md` - 実装設計
-3. `.steering/[YYYYMMDD]-initial-implementation/tasklist.md` - 実装タスク
+1. `.steering/[YYYYMMDD]-initial-implementation/requirements.md` - 初回実装の要求（MVP定義）
+2. `.steering/[YYYYMMDD]-initial-implementation/design.md` - 実装設計（サービス横断）
+3. `.steering/[YYYYMMDD]-initial-implementation/tasklist.md` - 実装タスク（Agent別分担）
 
-#### 4. 環境セットアップ
+**Agent別タスク分担の記載例：**
+```markdown
+## Frontend Agent
+- [ ] 加盟店一覧画面の実装
+- [ ] 契約詳細画面の実装
 
-#### 5. 実装開始
+## BFF Agent
+- [ ] 加盟店取得APIの実装
+- [ ] 契約管理APIの実装
 
-`.steering/[YYYYMMDD]-initial-implementation/tasklist.md` に基づいて実装を進めます。
+## Backend Agent
+- [ ] 加盟店管理ドメインロジックの実装
+- [ ] データベーススキーマの作成
+```
 
-#### 6. 品質チェック
+#### 5. 環境セットアップ
+
+各サービスの環境をセットアップします（Agent別に並行可能）。
+
+#### 6. 実装開始（Agent Teams並行実装）
+
+`.steering/[YYYYMMDD]-initial-implementation/tasklist.md` に基づいて、各Agentが担当サービスを並行実装します。
+
+**Agent間の調整ポイント：**
+- API契約の確定と`contracts/`への配置
+- 用語の統一（`docs/glossary.md`参照）
+- J-SOX要件の実装確認
+
+#### 7. 統合確認・品質チェック
+
+各サービスの統合テストとセキュリティチェックを実施します。
 
 ### 機能追加・修正時の手順
 
@@ -177,19 +260,33 @@ mkdir -p .steering/20250115-add-tag-feature
 
 #### 6. 品質チェック
 
-## ドキュメント管理の原則
+## ドキュメント管理の原則（マイクロサービス）
 
-### 永続的ドキュメント（`docs/`）
-- アプリケーションの基本設計を記述
+### ルート永続的ドキュメント（`docs/`）
+- **マイクロサービス全体**の基本設計を記述
+- 全Agent・全サービスが参照する「北極星」
+- 横断的要件（J-SOX、セキュリティ、用語）を一元管理
 - 頻繁に更新されない
-- 大きな設計変更時のみ更新
-- プロジェクト全体の「北極星」として機能
+- 大きなアーキテクチャ変更時のみ更新
+
+### サービス別永続的ドキュメント（`services/{service}/docs/`）
+- 各サービス固有の設計を記述
+- 担当Agentが主に参照・更新
+- ルートの`docs/`に記載された横断的要件の実装方法を記述
 
 ### 作業単位のドキュメント（`.steering/`）
-- 特定の作業・変更に特化
+- **ルートのステアリング**: 複数サービスにまたがる作業
+- **サービス別ステアリング**: サービス内完結の作業
 - 作業ごとに新しいディレクトリを作成
+- Agent別のタスク分担を明記
 - 作業完了後は履歴として保持
 - 変更の意図と経緯を記録
+
+### Agent間のドキュメント共有ルール
+1. **用語**: `docs/glossary.md`を全Agentが遵守
+2. **API契約**: `contracts/`に配置し、全Agentが参照
+3. **横断的要件**: `docs/jsox-compliance.md`等を全Agentが実装
+4. **変更通知**: あるAgentの変更が他Agentに影響する場合、ルートの`.steering/`で調整
 
 ## 図表・ダイアグラムの記載ルール
 

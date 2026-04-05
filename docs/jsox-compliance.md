@@ -147,17 +147,41 @@ if (approvalWorkflow.requested_by === currentUserId) {
 }
 ```
 
-#### ルール2: ロールベースの権限分離
-ユーザーロールごとに実行可能な操作を制限
+#### ルール2: 権限ベースのアクセス制御
+権限（Permission）単位で実行可能な操作を制限
 
-| ロール | 契約登録 | 契約編集申請 | 契約編集承認 | 監査ログ閲覧 |
-|--------|---------|-------------|-------------|-------------|
-| SYSTEM_ADMIN | ✅ | ✅ | ✅ | ✅ |
-| CONTRACT_MANAGER | ✅ | ✅ | ✅ | ✅ |
-| SALES | ✅ | ✅ | ❌ | ❌ |
-| VIEWER | ❌ | ❌ | ❌ | ❌ |
+**重要:** ロール名をハードコードせず、権限ベースでチェックすること
+
+**権限チェックの実装例:**
+```typescript
+// ❌ ロール名でのハードコードは禁止
+if (user.role === 'SYSTEM_ADMIN') { ... }
+if (user.role === 'CONTRACT_MANAGER') { ... }
+
+// ✅ 権限ベースでチェック
+if (await hasPermission(user.id, 'contracts:create')) { ... }
+if (await hasPermission(user.id, 'contracts:approve')) { ... }
+if (await hasPermission(user.id, 'audit:read')) { ... }
+```
+
+**初期権限マトリクス例:**
+
+| 権限 | system-admin | contract-manager | sales | viewer |
+|------|-------------|-----------------|-------|--------|
+| contracts:create | ✅ | ✅ | ✅ | ❌ |
+| contracts:update | ✅ | ✅ | ✅ | ❌ |
+| contracts:approve | ✅ | ✅ | ❌ | ❌ |
+| contracts:read | ✅ | ✅ | ✅ | ✅ |
+| audit:read | ✅ | ✅ | ❌ | ❌ |
+| roles:manage | ✅ | ❌ | ❌ | ❌ |
 
 **実装サービス:** BFF（認可チェック）
+
+**DBテーブル:**
+- `roles`: ロール定義
+- `permissions`: 権限定義
+- `role_permissions`: ロールと権限の紐付け
+- `user_roles`: ユーザーとロールの紐付け
 
 ---
 
@@ -167,13 +191,13 @@ if (approvalWorkflow.requested_by === currentUserId) {
 
 ```mermaid
 sequenceDiagram
-    participant User as 営業担当者（SALES）
+    participant User as 営業担当者（sales）
     participant BFF
     participant Backend
-    participant Manager as 契約管理者（CONTRACT_MANAGER）
+    participant Manager as 契約管理者（contract-manager）
 
     User->>BFF: 契約の月額料金変更申請
-    BFF->>BFF: 認可チェック（編集申請権限あり？）
+    BFF->>BFF: 認可チェック（contracts:update権限あり？）
     BFF->>Backend: gRPC CreateApprovalWorkflow()
     Backend->>Backend: approval_workflowsレコード作成（PENDING）
     Backend->>Backend: contract_changesレコード作成（approval_status=PENDING）
@@ -215,25 +239,65 @@ sequenceDiagram
 
 ### 実装ルール
 
-#### ルール1: ロールベースアクセス制御（RBAC）
-すべてのAPIエンドポイントに認可チェックを実装
+#### ルール1: 権限ベースアクセス制御（Permission-Based Access Control）
+すべてのAPIエンドポイントに権限チェックを実装
 
 **実装サービス:** BFF
 
+**重要:** ロール名ではなく、権限名でチェックすること
+
 **実装例:**
 ```typescript
-// ミドルウェアで認可チェック
+// ❌ ロール名でのチェックは禁止
 app.get('/api/contracts',
-  authenticate,  // 認証チェック
-  authorize(['SYSTEM_ADMIN', 'CONTRACT_MANAGER', 'SALES', 'VIEWER']),  // 認可チェック
+  authenticate,
+  authorize(['SYSTEM_ADMIN', 'CONTRACT_MANAGER', 'SALES', 'VIEWER']),  // これはNG
+  getContracts
+);
+
+// ✅ 権限ベースでチェック
+app.get('/api/contracts',
+  authenticate,
+  requirePermission('contracts:read'),  // 権限ベース
   getContracts
 );
 
 app.post('/api/contracts/:id/approve',
   authenticate,
-  authorize(['SYSTEM_ADMIN', 'CONTRACT_MANAGER']),  // 承認権限が必要
+  requirePermission('contracts:approve'),  // 承認権限が必要
   approveContractChange
 );
+
+app.get('/api/audit-logs',
+  authenticate,
+  requirePermission('audit:read'),  // 監査ログ閲覧権限
+  getAuditLogs
+);
+
+// requirePermission 実装イメージ
+function requirePermission(permissionName: string) {
+  return async (req, res, next) => {
+    const hasPermission = await checkUserPermission(req.user.id, permissionName);
+    if (!hasPermission) {
+      return res.status(403).json({ error: 'Permission denied' });
+    }
+    next();
+  };
+}
+
+// DBから権限をチェック
+async function checkUserPermission(userId: string, permissionName: string): Promise<boolean> {
+  const result = await prisma.$queryRaw`
+    SELECT EXISTS(
+      SELECT 1 FROM user_roles ur
+      JOIN role_permissions rp ON ur.role_id = rp.role_id
+      JOIN permissions p ON rp.permission_id = p.permission_id
+      WHERE ur.user_id = ${userId}
+        AND p.permission_name = ${permissionName}
+    ) as has_permission
+  `;
+  return result[0].has_permission;
+}
 ```
 
 #### ルール2: データレベルのアクセス制御
@@ -241,7 +305,7 @@ app.post('/api/contracts/:id/approve',
 
 **例:**
 - 営業担当者は自分が担当する加盟店のみ閲覧可能（将来実装）
-- 現在はロール単位での制御のみ
+- 現在は権限単位での制御のみ
 
 ---
 

@@ -145,16 +145,9 @@
 **英語:** User
 **コード上の命名:** `user`, `User`, `users`
 
-**ロール（Role）:**
-- `SYSTEM_ADMIN`: システム管理者
-- `CONTRACT_MANAGER`: 契約管理者
-- `SALES`: 営業担当者
-- `VIEWER`: 閲覧者
-
 **属性例:**
 - メールアドレス（email）
 - 氏名（name）
-- ロール（role）
 - 有効/無効（is_active）
 
 **関連用語:**
@@ -167,22 +160,65 @@
 ### ロール（Role）
 
 **定義:**
-ユーザーの職務に応じた権限セット
+ユーザーの職務に応じた権限セット。BFF DBで管理され、システム管理者が自由に作成・編集可能。
 
 **日本語:** ロール、役割
 **英語:** Role
 **コード上の命名:** `role`, `Role`, `roles`
 
-**種類:**
-- **システム管理者（SYSTEM_ADMIN）**: 全機能へのアクセス権限
-- **契約管理者（CONTRACT_MANAGER）**: 契約の登録・編集・承認権限
-- **営業担当者（SALES）**: 契約の閲覧・登録・申請権限
-- **閲覧者（VIEWER）**: 契約の閲覧のみ
+**重要:** ロール名はソースコードにハードコードせず、DBから動的に取得すること
+
+**初期ロール例（システム管理者が変更可能）:**
+- **system-admin**: システム管理者（全機能アクセス可能、ロール・権限管理可能）
+- **contract-manager**: 契約管理者（契約の登録・編集・承認可能）
+- **sales**: 営業担当者（契約閲覧・新規登録・申請可能）
+- **viewer**: 閲覧者（契約の閲覧のみ）
+
+**属性例:**
+- ロールID（role_id: `system-admin`, `contract-manager`等）
+- ロール名（role_name）
+- 説明（description）
 
 **関連用語:**
 - ユーザー（User）
 - 権限（Permission）
 - ロールベースアクセス制御（RBAC）
+
+---
+
+### 権限（Permission）
+
+**定義:**
+機能単位のアクセス権限。ロールに紐付けて管理される。
+
+**日本語:** 権限
+**英語:** Permission
+**コード上の命名:** `permission`, `Permission`, `permissions`
+
+**権限の命名規則:**
+`{resource}:{action}` 形式
+- resource: リソース名（merchants, contracts, users等）
+- action: 操作（read, create, update, delete, approve, manage等）
+
+**権限の例:**
+- `merchants:read` - 加盟店閲覧
+- `merchants:create` - 加盟店登録
+- `contracts:read` - 契約閲覧
+- `contracts:create` - 契約登録
+- `contracts:update` - 契約編集申請
+- `contracts:approve` - 契約承認
+- `users:manage` - ユーザー管理
+- `roles:manage` - ロール・権限管理
+
+**属性例:**
+- 権限ID（permission_id）
+- 権限名（permission_name: `contracts:approve`等）
+- リソース（resource: `contracts`）
+- アクション（action: `approve`）
+
+**関連用語:**
+- ロール（Role）
+- ユーザー（User）
 
 ---
 

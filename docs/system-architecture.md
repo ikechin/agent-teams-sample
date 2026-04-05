@@ -161,30 +161,63 @@ sequenceDiagram
 
 ### ロールベースアクセス制御（RBAC）
 
-**ロール定義:**
-- `SYSTEM_ADMIN`: システム管理者（全機能アクセス可）
-- `CONTRACT_MANAGER`: 契約管理者（契約の登録・編集・承認可）
-- `SALES`: 営業担当者（契約閲覧・新規登録・申請可）
-- `VIEWER`: 閲覧者（契約の閲覧のみ）
+#### ロール管理の方式
+**柔軟なロール管理**: ロールはBFF DBで管理し、システム管理者が自由に作成・編集可能
 
-**権限マトリクス:**
+**重要:** ロール名はソースコードにハードコードせず、DB（roles, permissions テーブル）から動的に取得
 
-| 機能 | SYSTEM_ADMIN | CONTRACT_MANAGER | SALES | VIEWER |
-|------|--------------|------------------|-------|--------|
-| 加盟店閲覧 | ✅ | ✅ | ✅ | ✅ |
-| 加盟店登録 | ✅ | ✅ | ✅ | ❌ |
-| 加盟店編集 | ✅ | ✅ | ❌ | ❌ |
-| 契約閲覧 | ✅ | ✅ | ✅ | ✅ |
-| 契約登録 | ✅ | ✅ | ✅ | ❌ |
-| 契約編集申請 | ✅ | ✅ | ✅ | ❌ |
-| 契約編集承認 | ✅ | ✅ | ❌ | ❌ |
-| サービス管理 | ✅ | ❌ | ❌ | ❌ |
-| ユーザー管理 | ✅ | ❌ | ❌ | ❌ |
-| 監査ログ閲覧 | ✅ | ✅ | ❌ | ❌ |
+#### 初期ロール定義例
+
+以下は初期セットアップ時のロール例です（システム管理者が変更可能）：
+
+| ロールID | ロール名 | 説明 |
+|---------|---------|------|
+| `system-admin` | システム管理者 | 全機能アクセス可能、ロール・権限管理可能 |
+| `contract-manager` | 契約管理者 | 契約の登録・編集・承認可能 |
+| `sales` | 営業担当者 | 契約閲覧・新規登録・申請可能 |
+| `viewer` | 閲覧者 | 契約の閲覧のみ可能 |
+
+#### 権限（Permission）管理
+
+権限は機能単位で定義され、ロールに紐付けられます：
+
+**権限の例:**
+- `merchants:read` - 加盟店閲覧
+- `merchants:create` - 加盟店登録
+- `merchants:update` - 加盟店編集
+- `contracts:read` - 契約閲覧
+- `contracts:create` - 契約登録
+- `contracts:update` - 契約編集申請
+- `contracts:approve` - 契約承認
+- `services:manage` - サービス管理
+- `users:manage` - ユーザー管理
+- `audit:read` - 監査ログ閲覧
+- `roles:manage` - ロール・権限管理
+
+#### ロール・権限の紐付け例
+
+| ロール | 権限 |
+|--------|------|
+| system-admin | すべての権限 + `roles:manage` |
+| contract-manager | `merchants:*`, `contracts:*`, `audit:read` |
+| sales | `merchants:read,create`, `contracts:read,create,update` |
+| viewer | `merchants:read`, `contracts:read` |
+
+**実装:** `services/bff/docs/functional-design.md` にテーブル設計詳細を記載
+
+#### 認可チェックの実装
+
+```typescript
+// ❌ ハードコードはしない
+if (user.role === 'SYSTEM_ADMIN') { ... }
+
+// ✅ 権限ベースでチェック
+if (await hasPermission(user.id, 'contracts:approve')) { ... }
+```
 
 ### 職務分掌（J-SOX対応）
 - **登録者と承認者の分離**: 契約の金額変更は登録者≠承認者を強制
-- **承認フロー**: 金額変更時は必ず`CONTRACT_MANAGER`以上の承認が必要
+- **承認権限の確認**: 金額変更の承認には`contracts:approve`権限が必要
 - **監査証跡**: すべての認可チェック結果を監査ログに記録
 
 ---
@@ -196,7 +229,11 @@ sequenceDiagram
 **目的:** 認証、認可、監査ログの管理
 
 **主要エンティティ:**
-- **users**: ユーザー情報とロール管理（email, password_hash, role）
+- **users**: ユーザー情報（email, password_hash）
+- **roles**: ロール定義（role_id, role_name, description）
+- **permissions**: 権限定義（permission_id, permission_name, resource, action）
+- **role_permissions**: ロールと権限の紐付け（role_id, permission_id）
+- **user_roles**: ユーザーとロールの紐付け（user_id, role_id）
 - **sessions**: セッション管理（session_token, user_id, expires_at）
 - **audit_logs**: API呼び出し記録（user_id, action, resource_type, request_path）
 

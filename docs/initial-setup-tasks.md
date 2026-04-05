@@ -68,55 +68,45 @@ mkdir -p services/{frontend,bff,backend}/{docs,.steering}
 
 ---
 
-#### 2-4. jsox-compliance.md ❌
+#### 2-4. jsox-compliance.md ✅
 
-**状況:** ❌ 未着手
+**状況:** ✅ 完了
 
-**作成内容（予定）:**
-- J-SOX要件の詳細
-- 監査証跡設計
-- 職務分掌の実装方針
-- アクセス制御設計
+**内容:**
+- J-SOX要件の詳細（5つの統制要素）
+- 監査証跡設計（audit_logs, contract_changes）
+- 職務分掌の実装方針（登録者≠承認者）
+- アクセス制御設計（権限ベースのチェック）
 - データ保護・暗号化方針
 - 承認フロー設計
 
-**参照:**
-- `product-requirements.md` の非機能要件（NFR-4: J-SOX対応）
-- `system-architecture.md` の認証・認可アーキテクチャ
-
 ---
 
-#### 2-5. security-guidelines.md ❌
+#### 2-5. security-guidelines.md ✅
 
-**状況:** ❌ 未着手
+**状況:** ✅ 完了
 
-**作成内容（予定）:**
-- 認証・認可の実装ガイドライン
-- データ暗号化の実装方法
-- セキュリティベストプラクティス
+**内容:**
+- 認証・認可の実装ガイドライン（Session, bcrypt, 権限チェック）
+- データ暗号化の実装方法（TLS, at-rest encryption）
+- セキュリティベストプラクティス（CSRF, XSS, SQLi対策）
 - OWASP Top 10対策
 - セキュリティテストガイドライン
 
-**参照:**
-- `system-architecture.md` のセキュリティ設計
-- `jsox-compliance.md`
-
 ---
 
-#### 2-6. service-contracts.md ❌
+#### 2-6. service-contracts.md ✅
 
-**状況:** ❌ 未着手
+**状況:** ✅ 完了
 
-**作成内容（予定）:**
+**内容:**
 - API契約管理の方針
-- OpenAPI仕様の管理方法
+- OpenAPI 3.0仕様の管理方法
 - Protocol Buffers（gRPC）の管理方法
 - バージョニング戦略
 - 後方互換性ポリシー
 - 変更管理プロセス
-
-**参照:**
-- `system-architecture.md` のサービス間通信
+- コード生成手順
 
 ---
 
@@ -282,7 +272,7 @@ Task 3 (Backend Agent):
 
 ## 進捗サマリー
 
-### ✅ 完了（7/17タスク）
+### ✅ 完了（10/17タスク）
 
 1. ✅ ディレクトリ構造作成
 2. ✅ product-requirements.md
@@ -291,18 +281,20 @@ Task 3 (Backend Agent):
 5. ✅ GitHubリポジトリ作成・プッシュ
 6. ✅ CLAUDE.mdのマイクロサービス対応
 7. ✅ Agent Teams運用方針の明記
+8. ✅ jsox-compliance.md
+9. ✅ security-guidelines.md
+10. ✅ service-contracts.md
+
+**ステップ2（ルート永続的ドキュメント）完了！**
 
 ### 🔄 次にやること（3/17タスク）
-
-8. ❌ jsox-compliance.md
-9. ❌ security-guidelines.md
-10. ❌ service-contracts.md
-
-### ⏸️ その後（7/17タスク）
 
 11. ❌ services/frontend/ のドキュメント一式
 12. ❌ services/bff/ のドキュメント一式
 13. ❌ services/backend/ のドキュメント一式
+
+### ⏸️ その後（4/17タスク）
+
 14. ❌ .steering/[日付]-initial-implementation/ の作成
 15. ❌ API契約定義（OpenAPI, Protocol Buffers）
 16. ❌ 環境セットアップ

@@ -27,6 +27,79 @@
 4. **変更影響分析**: 1つのサービス変更が他サービスに影響する場合、ルートの`.steering/`で調整
 5. **並行開発**: 各Agentは独立して作業可能だが、定期的に統合確認
 
+### Agent Teams運用方針
+
+#### 使用フェーズ
+**Agent Teamsは実装フェーズでのみ使用します（コスト最適化のため）**
+
+- ❌ **ドキュメント作成フェーズ**: 通常のClaude Code（単一Agent）で順次作成
+- ✅ **実装フェーズ**: Claude Code Agent Teams機能で並行実装
+
+#### 実装フェーズでのAgent Teams活用
+
+**前提条件：**
+- すべてのドキュメント（`docs/`と各サービスの`docs/`）が完成していること
+- `.steering/[YYYYMMDD]-[開発タイトル]/tasklist.md`でAgent別タスクが定義されていること
+- API契約（`contracts/`）の方針が確定していること
+
+**実行方法：**
+```
+Claude Code settings.json に以下を設定：
+{
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  }
+}
+
+Orchestratorが Taskツール を使用して複数Agentを並行起動：
+
+Task 1 (Frontend Agent):
+  subagent_type: general-purpose
+  workspace: services/frontend/
+  prompt: "ルートとサービスのCLAUDE.mdに従い、tasklist.mdのFrontend担当タスクを実装"
+
+Task 2 (BFF Agent):
+  subagent_type: general-purpose
+  workspace: services/bff/
+  prompt: "ルートとサービスのCLAUDE.mdに従い、tasklist.mdのBFF担当タスクを実装"
+
+Task 3 (Backend Agent):
+  subagent_type: general-purpose
+  workspace: services/backend/
+  prompt: "ルートとサービスのCLAUDE.mdに従い、tasklist.mdのBackend担当タスクを実装"
+```
+
+**Agent間の調整メカニズム：**
+- **API契約**: BFF Agentが`contracts/openapi/`にOpenAPI仕様を配置
+- **型定義**: 共通型は`contracts/types/`に配置
+- **進捗確認**: Orchestratorが定期的に各Agentの進捗を統合確認
+- **依存関係**: API契約確定後、Frontend/Backendが並行実装開始
+
+#### Agent別の責務
+
+**Frontend Agent:**
+- `services/frontend/`配下の実装
+- `services/frontend/CLAUDE.md`と`services/frontend/docs/`に従う
+- `contracts/openapi/`のAPI仕様を参照してAPI呼び出し実装
+- UI/UXの実装
+
+**BFF Agent:**
+- `services/bff/`配下の実装
+- `services/bff/CLAUDE.md`と`services/bff/docs/`に従う
+- `contracts/openapi/`にAPI仕様を定義・配置
+- Frontend向けAPIとBackend呼び出しの実装
+
+**Backend Agent:**
+- `services/backend/`配下の実装
+- `services/backend/CLAUDE.md`と`services/backend/docs/`に従う
+- ビジネスロジック、データアクセス層の実装
+- `docs/jsox-compliance.md`の要件を厳密に実装（監査ログ等）
+
+**QA/Security Agent（必要に応じて）:**
+- 横断的なテスト実装
+- セキュリティスキャン
+- J-SOX要件の実装確認
+
 ## プロジェクト構造
 
 ### ドキュメントの分類
@@ -138,6 +211,37 @@
 - `.steering/20250201-improve-performance/`
 
 ## 開発プロセス
+
+### 開発フェーズの区分
+
+#### フェーズ1: ドキュメント作成（Agent Teams不使用）
+**目的:** マイクロサービス全体の設計と各サービスの設計を確立
+
+**作業内容:**
+1. ルート永続的ドキュメント（`docs/`）の作成
+2. 各サービスのCLAUDE.mdと設計ドキュメント作成
+3. 初回実装用ステアリングファイル作成
+
+**Agent構成:**
+- 単一Agent（通常のClaude Code）が順次作成
+- コスト効率重視
+- 各ドキュメント作成後、承認を得てから次へ進む
+
+#### フェーズ2: 実装（Agent Teams使用）✅
+**目的:** 3サービスを並行実装し、統合されたシステムを構築
+
+**作業内容:**
+1. Frontend/BFF/Backendの並行実装
+2. API契約の実装と共有
+3. 統合テスト
+
+**Agent構成:**
+- 複数Agent（Claude Code Agent Teams）が並行作業
+- Frontend Agent、BFF Agent、Backend Agent
+- Orchestratorが全体調整
+
+**前提条件:**
+- フェーズ1のすべてのドキュメントが完成していること
 
 ### 初回セットアップ時の手順（マイクロサービス）
 

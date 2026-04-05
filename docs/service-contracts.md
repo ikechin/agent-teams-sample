@@ -61,7 +61,7 @@ servers:
     description: 本番環境
 
 paths:
-  /api/auth/login:
+  /api/v1/auth/login:
     post:
       summary: ユーザーログイン
       tags:
@@ -86,7 +86,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /api/contracts:
+  /api/v1/contracts:
     get:
       summary: 契約一覧取得
       tags:
@@ -685,7 +685,7 @@ contracts/proto/
 **OpenAPI:**
 ```yaml
 paths:
-  /api/contracts:
+  /api/v1/contracts:
     get:
       deprecated: true
       summary: 【非推奨】契約一覧取得（v2を使用してください）

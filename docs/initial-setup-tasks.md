@@ -112,19 +112,21 @@ mkdir -p services/{frontend,bff,backend}/{docs,.steering}
 
 ### ステップ3: サービス別CLAUDE.mdとドキュメント作成
 
-#### 3-1. Frontend Service ❌
+#### 3-1. Frontend Service 🔄
 
-**状況:** ❌ 未着手
+**状況:** 🔄 作業中（1/4完了）
 
 **作成ファイル:**
-1. `services/frontend/CLAUDE.md` - Frontend開発ルール（ルートCLAUDE.mdを継承）
-2. `services/frontend/docs/functional-design.md` - Frontend機能設計
+1. ✅ `services/frontend/CLAUDE.md` - Frontend開発ルール（ルートCLAUDE.mdを継承）
+   - 技術スタック: Next.js 14 + React + TypeScript + Tailwind CSS + shadcn/ui
+   - 開発原則、コーディング規約、テスト戦略を定義
+2. ❌ `services/frontend/docs/functional-design.md` - Frontend機能設計
    - UI/UX設計
    - 画面遷移図
    - コンポーネント設計
    - 状態管理設計
-3. `services/frontend/docs/repository-structure.md` - ディレクトリ構造
-4. `services/frontend/docs/development-guidelines.md` - 開発ガイドライン
+3. ❌ `services/frontend/docs/repository-structure.md` - ディレクトリ構造
+4. ❌ `services/frontend/docs/development-guidelines.md` - 開発ガイドライン
 
 **参照:**
 - `docs/product-requirements.md` のユーザーストーリー
@@ -289,7 +291,7 @@ Task 3 (Backend Agent):
 
 ### 🔄 次にやること（3/17タスク）
 
-11. ❌ services/frontend/ のドキュメント一式
+11. 🔄 services/frontend/ のドキュメント一式（1/4完了: CLAUDE.md ✅）
 12. ❌ services/bff/ のドキュメント一式
 13. ❌ services/backend/ のドキュメント一式
 

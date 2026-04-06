@@ -68,47 +68,23 @@ services/frontend/
 ├── CLAUDE.md                    # このファイル
 ├── docs/                        # Frontend設計ドキュメント
 │   ├── functional-design.md
-│   ├── repository-structure.md
+│   ├── repository-structure.md  # ← 詳細はこちらを参照
 │   └── development-guidelines.md
 ├── .steering/                   # Frontend固有のステアリング
 ├── src/
 │   ├── app/                     # App Router（ページ・レイアウト）
-│   │   ├── (auth)/              # 認証グループ
-│   │   │   └── login/
-│   │   ├── (dashboard)/         # ダッシュボードグループ
-│   │   │   ├── merchants/
-│   │   │   ├── contracts/
-│   │   │   └── services/
-│   │   ├── layout.tsx
-│   │   └── page.tsx
 │   ├── components/              # UIコンポーネント
-│   │   ├── ui/                  # shadcn/uiコンポーネント
-│   │   ├── merchants/           # 加盟店関連コンポーネント
-│   │   ├── contracts/           # 契約関連コンポーネント
-│   │   └── layouts/             # レイアウトコンポーネント
 │   ├── lib/                     # ユーティリティ・設定
-│   │   ├── api/                 # API クライアント
-│   │   ├── utils.ts             # 汎用ユーティリティ
-│   │   ├── cn.ts                # クラス名マージ
-│   │   └── validations/         # Zodスキーマ
 │   ├── hooks/                   # カスタムフック
 │   ├── stores/                  # Zustand ストア
 │   ├── types/                   # TypeScript型定義
-│   │   └── api.ts               # BFF APIの型（自動生成）
-│   └── styles/
-│       └── globals.css
+│   └── styles/                  # スタイル
 ├── public/                      # 静的ファイル
 ├── tests/                       # テストファイル
-│   ├── unit/
-│   ├── integration/
-│   └── e2e/
-├── package.json
-├── tsconfig.json
-├── tailwind.config.ts
-├── next.config.js
-├── .eslintrc.json
-└── .prettierrc
+└── 設定ファイル（package.json, tsconfig.json等）
 ```
+
+**詳細なディレクトリ構造は [docs/repository-structure.md](docs/repository-structure.md) を参照してください。**
 
 ---
 

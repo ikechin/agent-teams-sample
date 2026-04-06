@@ -112,21 +112,25 @@ mkdir -p services/{frontend,bff,backend}/{docs,.steering}
 
 ### ステップ3: サービス別CLAUDE.mdとドキュメント作成
 
-#### 3-1. Frontend Service 🔄
+#### 3-1. Frontend Service ✅
 
-**状況:** 🔄 作業中（1/4完了）
+**状況:** ✅ 完了（4/4完了）
 
 **作成ファイル:**
 1. ✅ `services/frontend/CLAUDE.md` - Frontend開発ルール（ルートCLAUDE.mdを継承）
    - 技術スタック: Next.js 14 + React + TypeScript + Tailwind CSS + shadcn/ui
    - 開発原則、コーディング規約、テスト戦略を定義
-2. ❌ `services/frontend/docs/functional-design.md` - Frontend機能設計
-   - UI/UX設計
-   - 画面遷移図
-   - コンポーネント設計
-   - 状態管理設計
-3. ❌ `services/frontend/docs/repository-structure.md` - ディレクトリ構造
-4. ❌ `services/frontend/docs/development-guidelines.md` - 開発ガイドライン
+2. ✅ `services/frontend/docs/functional-design.md` - Frontend機能設計
+   - 画面設計（10画面以上）、画面遷移図
+   - コンポーネント設計、状態管理設計
+   - APIクライアント、エラーハンドリング、テスト戦略
+3. ✅ `services/frontend/docs/repository-structure.md` - ディレクトリ構造
+   - 完全なディレクトリ構造、設定ファイル詳細
+   - 命名規則、インポートエイリアス
+4. ✅ `services/frontend/docs/development-guidelines.md` - 開発ガイドライン
+   - 開発フロー、コーディング規約（TypeScript/React/CSS）
+   - データフェッチング、フォーム処理、セキュリティ、パフォーマンス
+   - テスト戦略、アクセシビリティ、コードレビューチェックリスト
 
 **参照:**
 - `docs/product-requirements.md` のユーザーストーリー
@@ -274,7 +278,7 @@ Task 3 (Backend Agent):
 
 ## 進捗サマリー
 
-### ✅ 完了（10/17タスク）
+### ✅ 完了（11/17タスク）
 
 1. ✅ ディレクトリ構造作成
 2. ✅ product-requirements.md
@@ -286,12 +290,14 @@ Task 3 (Backend Agent):
 8. ✅ jsox-compliance.md
 9. ✅ security-guidelines.md
 10. ✅ service-contracts.md
+11. ✅ services/frontend/ のドキュメント一式
 
 **ステップ2（ルート永続的ドキュメント）完了！**
+**ステップ3-1（Frontend Service）完了！**
 
-### 🔄 次にやること（3/17タスク）
+### 🔄 次にやること（2/17タスク）
 
-11. 🔄 services/frontend/ のドキュメント一式（1/4完了: CLAUDE.md ✅）
+11. ✅ services/frontend/ のドキュメント一式（4/4完了）
 12. ❌ services/bff/ のドキュメント一式
 13. ❌ services/backend/ のドキュメント一式
 

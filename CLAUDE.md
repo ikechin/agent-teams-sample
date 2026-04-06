@@ -22,6 +22,7 @@
 - **Frontend Agent**: `services/frontend/`を担当
 - **BFF Agent**: `services/bff/`を担当
 - **Backend Agent**: `services/backend/`を担当
+- **E2E Test Agent**: `e2e/`を担当、全サービス統合テストを実装
 - **QA/Security Agent**: 横断的な品質・セキュリティチェック（J-SOX対応含む）
 
 ### Agent間の協調ルール
@@ -98,6 +99,12 @@ Task 3 (Backend Agent):
 - `services/backend/CLAUDE.md`と`services/backend/docs/`に従う
 - ビジネスロジック、データアクセス層の実装
 - `docs/jsox-compliance.md`の要件を厳密に実装（監査ログ等）
+
+**E2E Test Agent:**
+- `e2e/`配下の実装
+- Docker Composeで全サービスを起動してテスト実行
+- Playwrightを使用した統合E2Eテスト
+- Frontend/BFF/Backend全体のユーザーフローテスト
 
 **QA/Security Agent（必要に応じて）:**
 - 横断的なテスト実装
@@ -237,11 +244,12 @@ Task 3 (Backend Agent):
 **作業内容:**
 1. Frontend/BFF/Backendの並行実装
 2. API契約の実装と共有
-3. 統合テスト
+3. E2Eテストの並行実装
+4. 統合テスト
 
 **Agent構成:**
 - 複数Agent（Claude Code Agent Teams）が並行作業
-- Frontend Agent、BFF Agent、Backend Agent
+- Frontend Agent、BFF Agent、Backend Agent、E2E Test Agent
 - Orchestratorが全体調整
 
 **前提条件:**
@@ -253,6 +261,7 @@ Task 3 (Backend Agent):
 ```bash
 mkdir -p docs .steering contracts/openapi contracts/types
 mkdir -p services/{frontend,bff,backend}/{docs,.steering}
+mkdir -p e2e/tests/{auth,merchants,contracts}
 ```
 
 #### 2. ルート永続的ドキュメント作成（`docs/`）

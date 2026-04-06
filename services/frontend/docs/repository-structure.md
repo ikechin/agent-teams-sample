@@ -206,14 +206,11 @@ services/frontend/
 │   │   └── lib/
 │   │       └── format-date.test.ts
 │   │
-│   ├── integration/                    # 統合テスト
-│   │   └── api/
-│   │       └── merchants.test.ts
-│   │
-│   └── e2e/                            # E2Eテスト
-│       ├── merchant-flow.spec.ts
-│       ├── contract-flow.spec.ts
-│       └── login-flow.spec.ts
+│   └── integration/                    # 統合テスト
+│       └── api/
+│           └── merchants.test.ts
+│
+│   # 注意: E2Eテストはルートの e2e/ ディレクトリで一元管理
 │
 ├── .env.local                          # 環境変数（ローカル）
 ├── .env.example                        # 環境変数サンプル
@@ -570,19 +567,20 @@ export interface PaginatedResponse<T> {
 
 ### 7. `tests/` - テストファイル
 
-**役割:** テストコードの配置
+**役割:** ユニットテスト・統合テストの配置
+
+**注意:** E2Eテストはルートの`e2e/`ディレクトリで一元管理されています。
 
 **構成:**
 ```
 tests/
 ├── unit/               # ユニットテスト
-├── integration/        # 統合テスト
-└── e2e/                # E2Eテスト
+└── integration/        # 統合テスト
 ```
 
 **命名規則:**
 - ユニットテスト: `{FileName}.test.tsx` または `{FileName}.test.ts`
-- E2Eテスト: `{flow-name}.spec.ts`
+- 統合テスト: `{FileName}.test.ts`
 
 **配置例:**
 ```
@@ -593,10 +591,14 @@ tests/
 │   │       └── MerchantCard.test.tsx
 │   └── lib/
 │       └── format-date.test.ts
-└── e2e/
-    ├── merchant-flow.spec.ts
-    └── contract-flow.spec.ts
+└── integration/
+    └── api/
+        └── merchants.test.ts
 ```
+
+**E2Eテスト:**
+- E2Eテストは `../../e2e/` で一元管理
+- 詳細は [../../e2e/README.md](../../e2e/README.md) を参照
 
 ---
 
@@ -615,7 +617,6 @@ tests/
     "lint": "next lint",
     "type-check": "tsc --noEmit",
     "test": "vitest",
-    "test:e2e": "playwright test",
     "generate:api-types": "openapi-typescript ../../contracts/openapi/bff-api.yaml --output src/types/api.ts"
   },
   "dependencies": {
@@ -640,10 +641,11 @@ tests/
     "prettier": "^3.0.0",
     "vitest": "^1.0.0",
     "@testing-library/react": "^14.0.0",
-    "playwright": "^1.40.0",
     "openapi-typescript": "^6.7.0"
   }
 }
+
+// 注意: Playwright は ルートの e2e/ で管理
 ```
 
 ### tsconfig.json

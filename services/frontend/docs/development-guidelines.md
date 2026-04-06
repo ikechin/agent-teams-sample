@@ -810,62 +810,11 @@ describe('usePagination', () => {
 
 ### E2Eテスト
 
-**クリティカルパステスト:**
-```typescript
-// tests/e2e/merchant-flow.spec.ts
-import { test, expect } from '@playwright/test';
+**注意:** E2Eテストはルートの`e2e/`ディレクトリで一元管理されています。
 
-test.describe('加盟店管理フロー', () => {
-  test.beforeEach(async ({ page }) => {
-    // ログイン
-    await page.goto('/login');
-    await page.fill('[name="email"]', 'test@example.com');
-    await page.fill('[name="password"]', 'password123');
-    await page.click('button[type="submit"]');
-    await expect(page).toHaveURL('/dashboard');
-  });
+Frontend側ではユニットテストと統合テストに集中し、E2Eテストは全サービス統合テストとして実施します。
 
-  test('加盟店を新規登録できる', async ({ page }) => {
-    // 加盟店一覧へ
-    await page.click('text=加盟店');
-    await expect(page).toHaveURL('/dashboard/merchants');
-
-    // 新規登録
-    await page.click('text=新規登録');
-    await page.fill('[name="merchant_code"]', 'M-999');
-    await page.fill('[name="name"]', 'テスト加盟店');
-    await page.fill('[name="address"]', '東京都渋谷区');
-    await page.fill('[name="contact_person"]', '山田太郎');
-    await page.fill('[name="contact_phone"]', '03-1234-5678');
-    await page.fill('[name="contact_email"]', 'test@example.com');
-    await page.click('button:has-text("保存")');
-
-    // 成功メッセージ確認
-    await expect(page.locator('text=保存しました')).toBeVisible();
-
-    // 一覧に表示されることを確認
-    await expect(page.locator('text=テスト加盟店')).toBeVisible();
-  });
-
-  test('加盟店を編集できる', async ({ page }) => {
-    await page.goto('/dashboard/merchants');
-
-    // 最初の加盟店をクリック
-    await page.click('table tbody tr:first-child');
-
-    // 編集ボタンをクリック
-    await page.click('button:has-text("編集")');
-
-    // 店舗名を変更
-    await page.fill('[name="name"]', '更新後の店舗名');
-    await page.click('button:has-text("保存")');
-
-    // 成功メッセージ確認
-    await expect(page.locator('text=保存しました')).toBeVisible();
-    await expect(page.locator('text=更新後の店舗名')).toBeVisible();
-  });
-});
-```
+**E2Eテストの詳細は [../../e2e/README.md](../../e2e/README.md) を参照してください。**
 
 ---
 

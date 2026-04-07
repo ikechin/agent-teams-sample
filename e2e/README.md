@@ -16,6 +16,7 @@
 
 ```
 e2e/
+├── test-scenarios.md               # ★ E2Eテストシナリオ定義（重要）
 ├── tests/                          # テストファイル
 │   ├── auth/                       # 認証関連
 │   │   └── login-flow.spec.ts
@@ -37,6 +38,8 @@ e2e/
 ├── package.json
 └── README.md                       # このファイル
 ```
+
+**重要:** 新しい画面や機能を実装した際は、必ず [test-scenarios.md](test-scenarios.md) にテストシナリオを追加してください。
 
 ---
 
@@ -91,6 +94,8 @@ npm run test:ci
 ---
 
 ## テストの書き方
+
+**重要:** テストを書く前に、必ず [test-scenarios.md](test-scenarios.md) でテストシナリオを定義してください。
 
 ### 基本構造
 

@@ -278,7 +278,7 @@ Task 3 (Backend Agent):
 
 ## 進捗サマリー
 
-### ✅ 完了（11/17タスク）
+### ✅ 完了（12/17タスク）
 
 1. ✅ ディレクトリ構造作成
 2. ✅ product-requirements.md
@@ -290,23 +290,42 @@ Task 3 (Backend Agent):
 8. ✅ jsox-compliance.md
 9. ✅ security-guidelines.md
 10. ✅ service-contracts.md
-11. ✅ services/frontend/ のドキュメント一式
+11. ✅ services/frontend/ のドキュメント一式（4/4完了）
+    - ✅ services/frontend/CLAUDE.md
+    - ✅ services/frontend/docs/functional-design.md
+    - ✅ services/frontend/docs/repository-structure.md
+    - ✅ services/frontend/docs/development-guidelines.md
+12. ✅ E2Eテスト環境の構築
+    - ✅ e2e/ ディレクトリ作成
+    - ✅ e2e/README.md（Playwright設定・テストガイド）
+    - ✅ e2e/test-scenarios.md（テストシナリオ定義）
+    - ✅ e2e/playwright.config.ts
+    - ✅ e2e/tests/ サンプルテスト
+    - ✅ docs/glossary.md にE2E用語追加
 
 **ステップ2（ルート永続的ドキュメント）完了！**
 **ステップ3-1（Frontend Service）完了！**
+**E2Eテスト環境セットアップ完了！**
 
 ### 🔄 次にやること（2/17タスク）
 
-11. ✅ services/frontend/ のドキュメント一式（4/4完了）
-12. ❌ services/bff/ のドキュメント一式
-13. ❌ services/backend/ のドキュメント一式
+13. ❌ services/bff/ のドキュメント一式（4ファイル）
+    - ❌ services/bff/CLAUDE.md
+    - ❌ services/bff/docs/functional-design.md
+    - ❌ services/bff/docs/repository-structure.md
+    - ❌ services/bff/docs/development-guidelines.md
+14. ❌ services/backend/ のドキュメント一式（4ファイル）
+    - ❌ services/backend/CLAUDE.md
+    - ❌ services/backend/docs/functional-design.md
+    - ❌ services/backend/docs/repository-structure.md
+    - ❌ services/backend/docs/development-guidelines.md
 
-### ⏸️ その後（4/17タスク）
+### ⏸️ その後（3/17タスク）
 
-14. ❌ .steering/[日付]-initial-implementation/ の作成
-15. ❌ API契約定義（OpenAPI, Protocol Buffers）
-16. ❌ 環境セットアップ
-17. ❌ Agent Teams実装開始
+15. ❌ .steering/[日付]-initial-implementation/ の作成
+16. ❌ API契約定義（OpenAPI, Protocol Buffers）
+17. ❌ 環境セットアップ（Docker Compose等）
+18. ❌ Agent Teams実装開始
 
 ---
 
@@ -316,8 +335,12 @@ Task 3 (Backend Agent):
 - 用語は必ず `docs/glossary.md` に従う
 - Agent Teams実装フェーズは、すべてのドキュメントが完成してから開始
 - 会話が途切れた場合は、このドキュメントを参照して続きから再開
+- **技術スタック確定（2026-04-07更新）:**
+  - Frontend: Next.js 14 + React + TypeScript + Tailwind CSS + shadcn/ui
+  - BFF: **Go + Echo + sqlc**
+  - Backend: **Go + sqlc + gRPC**
 
 ---
 
-**最終更新日:** 2026-04-05
+**最終更新日:** 2026-04-07
 **作成者:** Claude Code

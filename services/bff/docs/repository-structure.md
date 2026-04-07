@@ -76,22 +76,16 @@ services/bff/
 │       └── env.go                      # 環境変数読み込み
 │
 ├── db/                                 # データベース関連
-│   ├── migrations/                     # マイグレーションファイル
-│   │   ├── 000001_create_users.up.sql
-│   │   ├── 000001_create_users.down.sql
-│   │   ├── 000002_create_roles.up.sql
-│   │   ├── 000002_create_roles.down.sql
-│   │   ├── 000003_create_permissions.up.sql
-│   │   ├── 000003_create_permissions.down.sql
-│   │   ├── 000004_create_role_permissions.up.sql
-│   │   ├── 000004_create_role_permissions.down.sql
-│   │   ├── 000005_create_sessions.up.sql
-│   │   ├── 000005_create_sessions.down.sql
-│   │   ├── 000006_create_audit_logs.up.sql
-│   │   ├── 000006_create_audit_logs.down.sql
-│   │   ├── 000007_seed_roles.up.sql         # ロール初期データ
-│   │   ├── 000008_seed_permissions.up.sql   # 権限初期データ
-│   │   └── 000009_seed_role_permissions.up.sql # ロール-権限初期データ
+│   ├── migrations/                     # Flywayマイグレーションファイル
+│   │   ├── V1__create_users.sql
+│   │   ├── V2__create_roles.sql
+│   │   ├── V3__create_permissions.sql
+│   │   ├── V4__create_role_permissions.sql
+│   │   ├── V5__create_sessions.sql
+│   │   ├── V6__create_audit_logs.sql
+│   │   ├── V7__seed_roles.sql               # ロール初期データ
+│   │   ├── V8__seed_permissions.sql         # 権限初期データ
+│   │   └── V9__seed_role_permissions.sql    # ロール-権限初期データ
 │   │
 │   ├── queries/                        # sqlcクエリ定義（*.sql）
 │   │   ├── user.sql                    # usersテーブルクエリ
@@ -463,22 +457,34 @@ type User struct {
 ---
 
 ### `db/migrations/`
-データベースマイグレーションファイル。
+Flywayマイグレーションファイル。
 
 **命名規則:**
 ```
-{連番6桁}_{説明}.up.sql
-{連番6桁}_{説明}.down.sql
+V{バージョン番号}__{説明}.sql
 ```
+
+- **バージョン番号**: 1, 2, 3... （連番、先頭の0不要）
+- **説明**: スネークケース（例: `create_users`, `add_index_to_users`）
 
 **例:**
-- `000001_create_users.up.sql`
-- `000001_create_users.down.sql`
+- `V1__create_users.sql`
+- `V2__create_roles.sql`
+- `V3__create_permissions.sql`
 
-**作成方法:**
+**マイグレーション実行:**
 ```bash
-migrate create -ext sql -dir db/migrations -seq create_users
+# Docker Composeで実行（推奨）
+docker-compose up bff-flyway
+
+# または直接実行
+flyway -configFiles=flyway.conf migrate
 ```
+
+**注意事項:**
+- 一度適用したマイグレーションファイルは変更しない
+- 新しい変更は新しいバージョンのファイルで追加する
+- ロールバック用のdownファイルは使用しない（Forward Onlyアプローチ）
 
 ---
 
@@ -568,7 +574,7 @@ func TestAuthFlow(t *testing.T) {
 - **テストファイル:** `{対象ファイル名}_test.go` （`auth_handler_test.go`）
 
 ### SQL ファイル
-- **マイグレーション:** `{連番6桁}_{説明}.up.sql` / `.down.sql`
+- **Flywayマイグレーション:** `V{バージョン番号}__{説明}.sql` （例: `V1__create_users.sql`）
 - **sqlcクエリ:** `{table}.sql` （`user.sql`, `session.sql`）
 
 ### 設定ファイル
@@ -607,11 +613,15 @@ LOG_LEVEL=info
 ## スクリプト
 
 ### `scripts/migrate.sh`
-マイグレーション実行スクリプト。
+Flywayマイグレーション実行スクリプト。
 
 ```bash
 #!/bin/bash
-migrate -path db/migrations -database "postgres://$DB_USER:$DB_PASSWORD@$DB_HOST:$DB_PORT/$DB_NAME?sslmode=disable" up
+# Flywayマイグレーション実行（Docker Compose推奨）
+docker-compose up bff-flyway
+
+# または直接実行
+# flyway -configFiles=flyway.conf migrate
 ```
 
 ### `scripts/generate.sh`

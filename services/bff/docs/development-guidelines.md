@@ -666,25 +666,125 @@ logger.Error("Failed to create merchant",
 
 ## データベースマイグレーション
 
-### golang-migrate を使用
+### Flyway を使用
 
-#### マイグレーションファイル作成
-```bash
-migrate create -ext sql -dir db/migrations -seq create_users
+BFFサービスでは **Flyway** をマイグレーションツールとして使用します。
+
+#### マイグレーションファイル配置
+
+```
+services/bff/db/migrations/
+├── V1__create_users.sql
+├── V2__create_roles.sql
+├── V3__create_permissions.sql
+├── V4__create_role_permissions.sql
+├── V5__create_sessions.sql
+├── V6__create_audit_logs.sql
+├── V7__seed_roles.sql
+├── V8__seed_permissions.sql
+└── V9__seed_role_permissions.sql
 ```
 
-生成されるファイル:
-- `000001_create_users.up.sql`
-- `000001_create_users.down.sql`
+#### 命名規則
+
+```
+V{バージョン番号}__{説明}.sql
+```
+
+- **バージョン番号**: 1, 2, 3... （連番、先頭の0不要）
+- **説明**: スネークケース（例: `create_users`, `add_index_to_users`）
+
+#### マイグレーションファイル作成例
+
+**V1__create_users.sql:**
+```sql
+CREATE TABLE users (
+    user_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    role_id VARCHAR(50) NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_role_id ON users(role_id);
+```
+
+#### Flyway設定ファイル
+
+**flyway.conf:**
+```properties
+flyway.url=jdbc:postgresql://localhost:5432/bff_db
+flyway.user=bff_user
+flyway.password=bff_password
+flyway.locations=filesystem:./db/migrations
+flyway.baselineOnMigrate=true
+```
 
 #### マイグレーション実行
-```bash
-# Up（適用）
-migrate -path db/migrations -database "postgres://user:pass@localhost:5432/bff_db?sslmode=disable" up
 
-# Down（ロールバック）
-migrate -path db/migrations -database "postgres://user:pass@localhost:5432/bff_db?sslmode=disable" down 1
+**Docker Composeでの実行（推奨）:**
+```yaml
+# docker-compose.yml
+version: '3.8'
+services:
+  bff-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: bff_db
+      POSTGRES_USER: bff_user
+      POSTGRES_PASSWORD: bff_password
+    ports:
+      - "5432:5432"
+
+  bff-flyway:
+    image: flyway/flyway:10
+    command: migrate
+    volumes:
+      - ./db/migrations:/flyway/sql
+    environment:
+      FLYWAY_URL: jdbc:postgresql://bff-db:5432/bff_db
+      FLYWAY_USER: bff_user
+      FLYWAY_PASSWORD: bff_password
+      FLYWAY_BASELINE_ON_MIGRATE: "true"
+    depends_on:
+      - bff-db
 ```
+
+**実行:**
+```bash
+# マイグレーション実行
+docker-compose up bff-flyway
+
+# または直接実行
+flyway -configFiles=flyway.conf migrate
+```
+
+#### Flywayコマンド
+
+```bash
+# マイグレーション実行
+flyway migrate
+
+# マイグレーション状態確認
+flyway info
+
+# マイグレーション検証
+flyway validate
+
+# クリーン（開発環境のみ）
+flyway clean
+```
+
+#### 注意事項
+
+- **本番環境では `flyway clean` を実行しない**（全データ削除）
+- マイグレーションファイルは一度適用したら変更しない
+- 新しい変更は新しいバージョンのファイルで追加する
+- ロールバック用のUndoファイルは基本的に使用しない（Forward Onlyアプローチ）
 
 ---
 
@@ -792,12 +892,16 @@ go mod download
 
 ### 2. PostgreSQL起動
 ```bash
-docker-compose up -d postgres
+docker-compose up -d bff-db
 ```
 
-### 3. マイグレーション実行
+### 3. Flywayマイグレーション実行
 ```bash
-./scripts/migrate.sh
+# Docker Composeで実行（推奨）
+docker-compose up bff-flyway
+
+# または直接実行
+flyway -configFiles=flyway.conf migrate
 ```
 
 ### 4. sqlc生成

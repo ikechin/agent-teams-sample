@@ -21,7 +21,7 @@
 
 **実装開始方法:**
 ```
-/start-implementation
+/start-implementation 20250407-frontend-bff-only
 ```
 または [docs/QUICKSTART.md](QUICKSTART.md) を参照
 

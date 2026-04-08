@@ -168,7 +168,7 @@ Cookie: session_token=<token>
 {
   "merchants": [
     {
-      "merchant_id": "550e8400-e29b-41d4-a716-446655440000",
+      "merchant_id": "mock-merchant-00000000-0000-0000-0000-000000000001",
       "merchant_code": "M-00001",
       "name": "テスト加盟店1",
       "address": "東京都渋谷区渋谷1-1-1",
@@ -180,7 +180,7 @@ Cookie: session_token=<token>
       "updated_at": "2025-01-01T00:00:00Z"
     },
     {
-      "merchant_id": "550e8400-e29b-41d4-a716-446655440001",
+      "merchant_id": "mock-merchant-00000000-0000-0000-0000-000000000002",
       "merchant_code": "M-00002",
       "name": "テスト加盟店2",
       "address": "東京都新宿区新宿2-2-2",
@@ -198,6 +198,8 @@ Cookie: session_token=<token>
 }
 ```
 
+**注意:** `merchant_id` フィールドは実際のBackend実装時にはUUID v4形式になります。今回はモック用に識別しやすい形式を使用しています。
+
 ---
 
 ## BFFモック実装
@@ -207,10 +209,10 @@ Cookie: session_token=<token>
 ```go
 // internal/handler/merchant_handler.go (BFF)
 
-// モックデータ
+// モックデータ（注意: UUIDはモック用の固定値）
 var mockMerchants = []map[string]interface{}{
     {
-        "merchant_id":    "550e8400-e29b-41d4-a716-446655440000",
+        "merchant_id":    "mock-merchant-00000000-0000-0000-0000-000000000001",
         "merchant_code":  "M-00001",
         "name":           "テスト加盟店1",
         "address":        "東京都渋谷区渋谷1-1-1",
@@ -222,7 +224,7 @@ var mockMerchants = []map[string]interface{}{
         "updated_at":     "2025-01-01T00:00:00Z",
     },
     {
-        "merchant_id":    "550e8400-e29b-41d4-a716-446655440001",
+        "merchant_id":    "mock-merchant-00000000-0000-0000-0000-000000000002",
         "merchant_code":  "M-00002",
         "name":           "テスト加盟店2",
         "address":        "東京都新宿区新宿2-2-2",
@@ -289,10 +291,14 @@ CREATE TABLE users (
 
 **初期データ:**
 ```sql
--- パスワード: password123 (bcryptハッシュ化)
+-- テストユーザー
+-- メールアドレス: test@example.com
+-- パスワード: password123 (bcrypt コスト12でハッシュ化)
 INSERT INTO users (email, password_hash, name, role_id) VALUES
-('test@example.com', '$2a$12$...', 'テストユーザー', 'contract-manager');
+('test@example.com', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5GyYnQJe4w.7G', 'テストユーザー', 'contract-manager');
 ```
+
+**注意:** パスワードハッシュは実際のbcrypt結果に置き換える必要があります。上記は例示です。
 
 ---
 
@@ -394,6 +400,32 @@ CREATE TABLE audit_logs (
 ---
 
 ## Frontend設計
+
+### ディレクトリ構造（App Router）
+
+```
+services/frontend/
+├── src/
+│   └── app/
+│       ├── login/
+│       │   └── page.tsx                # ログイン画面 (/login)
+│       └── dashboard/
+│           ├── layout.tsx              # ダッシュボードレイアウト
+│           ├── page.tsx                # ダッシュボードトップ (/dashboard)
+│           └── merchants/
+│               └── page.tsx            # 加盟店一覧画面 (/dashboard/merchants)
+```
+
+**ルーティング:**
+- `/login` - ログイン画面（認証不要）
+- `/dashboard` - ダッシュボードトップ（認証必要）
+- `/dashboard/merchants` - 加盟店一覧画面（認証必要）
+
+**認証チェック:**
+- `app/dashboard/layout.tsx` でセッション検証を実施
+- 未認証の場合は `/login` へリダイレクト
+
+---
 
 ### 画面構成
 

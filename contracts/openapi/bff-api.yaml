@@ -1,0 +1,320 @@
+openapi: 3.0.3
+info:
+  title: BFF API for Merchant Contract Management System
+  description: |
+    Backend for Frontend API providing authentication and merchant management endpoints.
+    This API serves the Next.js frontend application.
+  version: 1.0.0
+  contact:
+    name: Development Team
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+  - url: https://bff.example.com
+    description: Production server
+
+tags:
+  - name: Authentication
+    description: User authentication operations
+  - name: Merchants
+    description: Merchant management operations
+
+paths:
+  /api/v1/auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      description: Authenticates user credentials and creates a session
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: test@example.com
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  example: password123
+      responses:
+        '200':
+          description: Login successful
+          headers:
+            Set-Cookie:
+              description: Session cookie (HttpOnly, Secure, SameSite=Lax)
+              schema:
+                type: string
+                example: session_id=abc123; HttpOnly; Secure; SameSite=Lax; Max-Age=86400
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+        '401':
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Invalid email or password"
+        '400':
+          description: Bad request (validation error)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: User logout
+      description: Invalidates the current session
+      operationId: logout
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Logout successful
+          headers:
+            Set-Cookie:
+              description: Cleared session cookie
+              schema:
+                type: string
+                example: session_id=; HttpOnly; Secure; SameSite=Lax; Max-Age=0
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Logged out successfully"
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/auth/me:
+    get:
+      tags:
+        - Authentication
+      summary: Get current user
+      description: Returns the currently authenticated user's information
+      operationId: getCurrentUser
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: User information retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/merchants:
+    get:
+      tags:
+        - Merchants
+      summary: List merchants
+      description: |
+        Returns a list of merchants. In the initial implementation (Frontend→BFF only),
+        this endpoint returns mock data without calling the Backend service.
+      operationId: listMerchants
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: Page number (1-indexed)
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Number of items per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: search
+          in: query
+          description: Search query (merchant code or name)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of merchants
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  merchants:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Merchant'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: session_id
+      description: Session-based authentication using HttpOnly cookies
+
+  schemas:
+    User:
+      type: object
+      required:
+        - user_id
+        - email
+        - name
+        - role
+      properties:
+        user_id:
+          type: string
+          format: uuid
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        email:
+          type: string
+          format: email
+          example: "test@example.com"
+        name:
+          type: string
+          example: "テストユーザー"
+        role:
+          type: string
+          example: "admin"
+          description: User role name
+        permissions:
+          type: array
+          items:
+            type: string
+          example: ["merchant.read", "merchant.write", "contract.read"]
+          description: List of permission codes assigned to the user
+
+    Merchant:
+      type: object
+      required:
+        - merchant_id
+        - merchant_code
+        - name
+        - address
+        - phone
+        - contact_person
+        - created_at
+        - updated_at
+      properties:
+        merchant_id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        merchant_code:
+          type: string
+          example: "M-00001"
+          description: Unique merchant code
+        name:
+          type: string
+          example: "テスト加盟店1"
+          description: Merchant name
+        address:
+          type: string
+          example: "東京都渋谷区1-1-1"
+          description: Merchant address
+        phone:
+          type: string
+          example: "03-1234-5678"
+          description: Merchant phone number
+        contact_person:
+          type: string
+          example: "山田太郎"
+          description: Contact person name
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+
+    Pagination:
+      type: object
+      required:
+        - current_page
+        - total_pages
+        - total_items
+        - items_per_page
+      properties:
+        current_page:
+          type: integer
+          example: 1
+          description: Current page number (1-indexed)
+        total_pages:
+          type: integer
+          example: 5
+          description: Total number of pages
+        total_items:
+          type: integer
+          example: 100
+          description: Total number of items
+        items_per_page:
+          type: integer
+          example: 20
+          description: Number of items per page
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Error message
+          example: "Invalid email or password"
+        details:
+          type: object
+          description: Additional error details (optional)
+          additionalProperties: true

@@ -58,7 +58,10 @@
 #### 環境セットアップ
 - [ ] Goプロジェクト初期化（go.mod）
 - [ ] 依存関係インストール（Echo, sqlc, bcrypt, zap, godotenv, validator）
-- [ ] Docker Compose設定（bff-db, bff-flyway）
+- [ ] Docker Compose設定（`services/bff/docker-compose.yml`）
+  - [ ] bff-db（PostgreSQL）
+  - [ ] bff-flyway（Flyway migration）
+  - [ ] bff（Go server）
 - [ ] .env.example作成
 
 #### データベース
@@ -141,7 +144,12 @@
 #### 環境セットアップ
 - [ ] Playwrightインストール
 - [ ] playwright.config.ts設定
-- [ ] Docker Compose設定（frontend, bff, bff-db）
+- [ ] Docker Compose設定（`e2e/docker-compose.yml`）
+  - [ ] frontend（Next.js）
+  - [ ] bff（Go server）
+  - [ ] bff-db（PostgreSQL）
+  - [ ] bff-flyway（Flyway migration）
+  - [ ] ネットワーク設定（サービス間通信）
 - [ ] テストヘルパー関数作成（e2e/utils/test-helpers.ts）
   - [ ] login()
   - [ ] logout()
@@ -224,7 +232,7 @@ graph TD
 
 **BFF Agent:**
 1. Goプロジェクト初期化
-2. Docker Compose設定
+2. Docker Compose設定（`services/bff/docker-compose.yml`）
 3. Flywayマイグレーション作成・実行
 4. sqlc generate実行
 
@@ -264,7 +272,7 @@ graph TD
 ### フェーズ4: E2Eテスト実装（Frontend/BFF完了後）
 
 **E2E Test Agent:**
-1. Docker Compose設定
+1. Docker Compose設定（`e2e/docker-compose.yml`）
 2. ログインフローテスト実装
 3. 加盟店一覧表示テスト実装
 

@@ -69,6 +69,11 @@
   - CORSミドルウェア
   - ロギングミドルウェア
 
+- ✅ **権限チェック**
+  - 認証済みユーザーのみがAPIにアクセス可能
+  - 加盟店一覧APIは `merchant.read` 権限を持つユーザーのみアクセス可能
+  - 権限不足の場合は403エラーを返却
+
 - ✅ **データベース**
   - Flywayマイグレーション実行（users, roles, permissions, sessions, audit_logs）
   - 初期データ投入（users, roles, permissions, role_permissions）
@@ -188,7 +193,7 @@
 - ✅ セッションベース認証
 - ✅ パスワードのbcryptハッシュ化（コスト12）
 - ✅ HttpOnly Cookie（XSS対策）
-- ✅ CSRF対策（Double Submit Cookie）
+- ❌ CSRF対策（次回タスクで実装）
 - ✅ HTTPS通信（本番環境のみ）
 
 ### パフォーマンス

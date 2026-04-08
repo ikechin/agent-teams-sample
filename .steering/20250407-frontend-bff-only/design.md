@@ -254,9 +254,12 @@ func (h *MerchantHandler) ListMerchants(c echo.Context) error {
     // モックデータ返却
     response := map[string]interface{}{
         "merchants": mockMerchants,
-        "total":     2,
-        "page":      1,
-        "limit":     20,
+        "pagination": map[string]interface{}{
+            "current_page":   1,
+            "total_pages":    1,
+            "total_items":    2,
+            "items_per_page": 20,
+        },
     }
 
     // 監査ログ記録

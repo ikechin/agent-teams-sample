@@ -232,7 +232,7 @@ components:
           type: array
           items:
             type: string
-          example: ["merchant.read", "merchant.write", "contract.read"]
+          example: ["merchants:read", "merchants:write", "contracts:read"]
           description: List of permission codes assigned to the user
 
     Merchant:

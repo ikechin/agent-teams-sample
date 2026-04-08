@@ -163,10 +163,11 @@ Agent構成は tasklist.md の「Agent別タスク分担」セクションを参
 | 優先度 | ファイル | 内容 | 読むタイミング |
 |--------|---------|------|---------------|
 | 🔴 必須 | [docs/QUICKSTART.md](QUICKSTART.md) | このファイル | 最初に必ず読む |
-| 🔴 必須 | [.steering/20250407-frontend-bff-only/requirements.md](../.steering/20250407-frontend-bff-only/requirements.md) | 今回実装する機能の要求定義 | 2番目に読む |
-| 🔴 必須 | [.steering/20250407-frontend-bff-only/tasklist.md](../.steering/20250407-frontend-bff-only/tasklist.md) | Agent別タスク一覧 | 3番目に読む |
+| 🔴 必須 | [docs/initial-setup-tasks.md](initial-setup-tasks.md) | 現在の実装対象タスク | 2番目に読む |
+| 🔴 必須 | `.steering/[YYYYMMDD]-[タスク名]/requirements.md` | 今回実装する機能の要求定義 | 3番目に読む |
+| 🔴 必須 | `.steering/[YYYYMMDD]-[タスク名]/tasklist.md` | Agent別タスク一覧 | 4番目に読む |
 | 🔴 必須 | [docs/ENVIRONMENT.md](ENVIRONMENT.md) | 環境設定チートシート | 実装開始前に確認 |
-| 🟡 推奨 | [.steering/20250407-frontend-bff-only/design.md](../.steering/20250407-frontend-bff-only/design.md) | 実装設計の詳細 | 実装中に参照 |
+| 🟡 推奨 | `.steering/[YYYYMMDD]-[タスク名]/design.md` | 実装設計の詳細 | 実装中に参照 |
 | 🟡 推奨 | [contracts/openapi/bff-api.yaml](../contracts/openapi/bff-api.yaml) | BFF API仕様 | API実装時に参照 |
 | 🟢 参考 | [CLAUDE.md](../CLAUDE.md) | プロジェクト全体のルール | 必要に応じて参照 |
 | 🟢 参考 | [docs/glossary.md](glossary.md) | 用語集 | 用語確認時に参照 |
@@ -186,6 +187,21 @@ Agent構成は tasklist.md の「Agent別タスク分担」セクションを参
 #### E2E Test Agent
 - [e2e/README.md](../e2e/README.md) - E2Eテスト概要
 - [e2e/test-scenarios.md](../e2e/test-scenarios.md) - テストシナリオ
+
+---
+
+## 🔑 テスト用認証情報
+
+**ログイン情報:**
+- **メールアドレス:** `test@example.com`
+- **パスワード:** `password123`
+
+**ロール:** `contract-manager` (契約管理者)
+
+**権限:**
+- `merchants:read` - 加盟店閲覧
+
+詳細は [docs/ENVIRONMENT.md](ENVIRONMENT.md) および `.steering/[YYYYMMDD]-[タスク名]/design.md` を参照してください。
 
 ---
 

@@ -140,41 +140,56 @@ mkdir -p services/{frontend,bff,backend}/{docs,.steering}
 
 ---
 
-#### 3-2. BFF Service ❌
+#### 3-2. BFF Service ✅
 
-**状況:** ❌ 未着手
+**状況:** ✅ 完了（4/4完了）
 
 **作成ファイル:**
-1. `services/bff/CLAUDE.md` - BFF開発ルール（ルートCLAUDE.mdを継承）
-2. `services/bff/docs/functional-design.md` - BFF機能設計
+1. ✅ `services/bff/CLAUDE.md` - BFF開発ルール（ルートCLAUDE.mdを継承）
+   - 技術スタック: Go 1.21+ + Echo + sqlc + Flyway
+   - 開発原則、コーディング規約、テスト戦略を定義
+2. ✅ `services/bff/docs/functional-design.md` - BFF機能設計
    - API Gateway設計
    - 認証・認可ロジック
-   - **BFF DBのテーブル定義詳細**（users, sessions, audit_logs）
-   - gRPCクライアント実装
-3. `services/bff/docs/repository-structure.md` - ディレクトリ構造
-4. `services/bff/docs/development-guidelines.md` - 開発ガイドライン
+   - **BFF DBのテーブル定義詳細**（users, roles, permissions, sessions, audit_logs）
+   - 監査ログ設計
+3. ✅ `services/bff/docs/repository-structure.md` - ディレクトリ構造
+   - 完全なディレクトリ構造、設定ファイル詳細
+   - Flyway migrations配置
+4. ✅ `services/bff/docs/development-guidelines.md` - 開発ガイドライン
+   - Go開発フロー、コーディング規約
+   - Echo/sqlc/Flyway使用方法
+   - セキュリティ、パフォーマンス、テスト戦略
 
 **参照:**
 - `docs/system-architecture.md` のBFF設計
 - `docs/glossary.md` の用語統一
 - `docs/jsox-compliance.md` の監査ログ要件
-- `contracts/proto/`（Backend gRPC API仕様）
+- `contracts/openapi/bff-api.yaml`（BFF OpenAPI仕様）
 
 ---
 
-#### 3-3. Backend Service ❌
+#### 3-3. Backend Service ✅
 
-**状況:** ❌ 未着手
+**状況:** ✅ 完了（4/4完了）
 
 **作成ファイル:**
-1. `services/backend/CLAUDE.md` - Backend開発ルール（ルートCLAUDE.mdを継承）
-2. `services/backend/docs/functional-design.md` - Backend機能設計
+1. ✅ `services/backend/CLAUDE.md` - Backend開発ルール（ルートCLAUDE.mdを継承）
+   - 技術スタック: Go 1.21+ + gRPC + sqlc + Flyway
+   - 開発原則、コーディング規約、テスト戦略を定義
+2. ✅ `services/backend/docs/functional-design.md` - Backend機能設計
    - ビジネスロジック設計
-   - ドメインモデル設計
-   - **Backend DBのテーブル定義詳細**（merchants, contracts, services, contract_changes, approval_workflows）
+   - ドメインモデル設計（加盟店、契約、サービス、承認ワークフロー）
+   - **Backend DBのテーブル定義詳細**（merchants, services, contracts, contract_changes, approval_workflows）
    - gRPCサーバー実装
-3. `services/backend/docs/repository-structure.md` - ディレクトリ構造
-4. `services/backend/docs/development-guidelines.md` - 開発ガイドライン
+   - 監査証跡・承認フロー設計
+3. ✅ `services/backend/docs/repository-structure.md` - ディレクトリ構造
+   - 完全なディレクトリ構造、設定ファイル詳細
+   - Flyway migrations配置、Protocol Buffers配置
+4. ✅ `services/backend/docs/development-guidelines.md` - 開発ガイドライン
+   - Go開発フロー、コーディング規約
+   - gRPC/sqlc/Flyway使用方法
+   - セキュリティ、パフォーマンス、テスト戦略
 
 **参照:**
 - `docs/product-requirements.md` のビジネス要件
@@ -184,53 +199,50 @@ mkdir -p services/{frontend,bff,backend}/{docs,.steering}
 
 ---
 
-### ステップ4: 初回実装用のステアリングファイル作成 ❌
+### ステップ4: 初回実装用のステアリングファイル作成 ✅
 
-**状況:** ❌ 未着手
+**状況:** ✅ 完了（Frontend→BFF Agent Teams検証用）
 
 **ディレクトリ作成:**
 ```bash
-mkdir -p .steering/YYYYMMDD-initial-implementation
+mkdir -p .steering/20250407-frontend-bff-only
 ```
+
+**重要:** 今回は**Agent Teams機能の挙動確認**を目的とした最小スコープで実装します。
+- ✅ Frontend + BFF + E2E Test を実装
+- ❌ Backend は次回タスクで実装
 
 **作成ファイル:**
 
-#### 4-1. requirements.md
-初回実装の要求（MVP定義）
-- 実装する機能の範囲
-- 優先順位
-- スコープ外の機能
+#### 4-1. requirements.md ✅
+初回実装の要求（Agent Teams検証用MVP定義）
+- 実装する機能: ログイン + 加盟店一覧（モックデータ）
+- BFFはモックデータ返却（Backend呼び出しなし）
+- スコープ外: Backend Service全体、CSRF対策、詳細画面等
 
-#### 4-2. design.md
-実装設計（サービス横断）
-- API契約の詳細
-- データフロー
-- 認証フロー
-- エラーハンドリング
+#### 4-2. design.md ✅
+実装設計（Frontend + BFF）
+- システム構成図（Frontend → BFF → BFF DB）
+- データフロー（ログイン、加盟店一覧取得）
+- API設計（認証API 3つ + 加盟店API 1つ）
+- BFFモック実装の詳細
+- データベース設計（BFF DBのみ、6テーブル）
+- Frontend routing構造（App Router）
+- セキュリティ設計（認証フロー）
 
-#### 4-3. tasklist.md
-Agent別タスク分担
+#### 4-3. tasklist.md ✅
+Agent別タスク分担（3 Agent）
+- Frontend Agent: ログイン画面、ダッシュボード、加盟店一覧画面
+- BFF Agent: 認証API、加盟店API（モック）、DB初期データ、ミドルウェア
+- E2E Test Agent: ログインフローテスト、加盟店一覧表示テスト
+- Agent間の依存関係図（Mermaid）
+- 実装順序（フェーズ1〜4）
 
-**例:**
-```markdown
-## Frontend Agent
-- [ ] 加盟店一覧画面の実装
-- [ ] 契約詳細画面の実装
-- [ ] ログイン画面の実装
-
-## BFF Agent
-- [ ] 認証APIの実装（/api/auth/login, /api/auth/logout）
-- [ ] 加盟店APIの実装（/api/merchants）
-- [ ] 契約APIの実装（/api/contracts）
-- [ ] gRPCクライアントの実装
-
-## Backend Agent
-- [ ] gRPCサーバーのセットアップ
-- [ ] 加盟店管理ドメインロジックの実装
-- [ ] 契約管理ドメインロジックの実装
-- [ ] データベーススキーマの作成
-- [ ] 契約変更履歴機能の実装（J-SOX対応）
-```
+#### 4-4. contracts/openapi/bff-api.yaml ✅
+BFF API仕様（OpenAPI 3.0.3）
+- 認証API: login, logout, me
+- 加盟店API: merchants（モックデータ）
+- セッション認証スキーマ定義
 
 ---
 
@@ -278,54 +290,72 @@ Task 3 (Backend Agent):
 
 ## 進捗サマリー
 
-### ✅ 完了（12/17タスク）
+### ✅ フェーズ1完了（17/17タスク）
 
+#### ステップ1: ディレクトリ構造作成 ✅
 1. ✅ ディレクトリ構造作成
+
+#### ステップ2: ルート永続的ドキュメント作成 ✅
 2. ✅ product-requirements.md
 3. ✅ system-architecture.md
 4. ✅ glossary.md
-5. ✅ GitHubリポジトリ作成・プッシュ
-6. ✅ CLAUDE.mdのマイクロサービス対応
-7. ✅ Agent Teams運用方針の明記
-8. ✅ jsox-compliance.md
-9. ✅ security-guidelines.md
-10. ✅ service-contracts.md
-11. ✅ services/frontend/ のドキュメント一式（4/4完了）
+5. ✅ jsox-compliance.md
+6. ✅ security-guidelines.md
+7. ✅ service-contracts.md
+
+#### ステップ3: サービス別CLAUDE.mdとドキュメント作成 ✅
+8. ✅ services/frontend/ のドキュメント一式（4/4完了）
     - ✅ services/frontend/CLAUDE.md
     - ✅ services/frontend/docs/functional-design.md
     - ✅ services/frontend/docs/repository-structure.md
     - ✅ services/frontend/docs/development-guidelines.md
+
+9. ✅ services/bff/ のドキュメント一式（4/4完了）
+    - ✅ services/bff/CLAUDE.md
+    - ✅ services/bff/docs/functional-design.md
+    - ✅ services/bff/docs/repository-structure.md
+    - ✅ services/bff/docs/development-guidelines.md
+
+10. ✅ services/backend/ のドキュメント一式（4/4完了）
+    - ✅ services/backend/CLAUDE.md
+    - ✅ services/backend/docs/functional-design.md
+    - ✅ services/backend/docs/repository-structure.md
+    - ✅ services/backend/docs/development-guidelines.md
+
+#### ステップ4: 初回実装用のステアリングファイル作成 ✅
+11. ✅ .steering/20250407-frontend-bff-only/ の作成
+    - ✅ requirements.md（Agent Teams検証用MVP定義）
+    - ✅ design.md（Frontend + BFF設計）
+    - ✅ tasklist.md（3 Agent分担）
+    - ✅ contracts/openapi/bff-api.yaml（OpenAPI仕様）
+
+#### その他
 12. ✅ E2Eテスト環境の構築
     - ✅ e2e/ ディレクトリ作成
-    - ✅ e2e/README.md（Playwright設定・テストガイド）
-    - ✅ e2e/test-scenarios.md（テストシナリオ定義）
+    - ✅ e2e/README.md
+    - ✅ e2e/test-scenarios.md
     - ✅ e2e/playwright.config.ts
     - ✅ e2e/tests/ サンプルテスト
-    - ✅ docs/glossary.md にE2E用語追加
 
-**ステップ2（ルート永続的ドキュメント）完了！**
-**ステップ3-1（Frontend Service）完了！**
-**E2Eテスト環境セットアップ完了！**
+13. ✅ Agent Teams環境設定
+    - ✅ .claude/settings.json（CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1）
+    - ✅ .gitignore
 
-### 🔄 次にやること（2/17タスク）
+14. ✅ コンテキストクリーン用ドキュメント
+    - ✅ docs/QUICKSTART.md（Quick Start Guide）
+    - ✅ docs/ENVIRONMENT.md（環境設定チートシート）
+    - ✅ docs/initial-setup-tasks.md（このファイル）更新
 
-13. ❌ services/bff/ のドキュメント一式（4ファイル）
-    - ❌ services/bff/CLAUDE.md
-    - ❌ services/bff/docs/functional-design.md
-    - ❌ services/bff/docs/repository-structure.md
-    - ❌ services/bff/docs/development-guidelines.md
-14. ❌ services/backend/ のドキュメント一式（4ファイル）
-    - ❌ services/backend/CLAUDE.md
-    - ❌ services/backend/docs/functional-design.md
-    - ❌ services/backend/docs/repository-structure.md
-    - ❌ services/backend/docs/development-guidelines.md
+15. ✅ GitHubリポジトリ作成・プッシュ
 
-### ⏸️ その後（3/17タスク）
+**🎉 フェーズ1（ドキュメント作成）完了！**
 
-15. ❌ .steering/[日付]-initial-implementation/ の作成
-16. ❌ API契約定義（OpenAPI, Protocol Buffers）
-17. ❌ 環境セットアップ（Docker Compose等）
-18. ❌ Agent Teams実装開始
+### 🎯 フェーズ2: Agent Teams実装開始準備完了
+
+**次のステップ:**
+1. 新しいClaude Codeセッションを開始
+2. [docs/QUICKSTART.md](QUICKSTART.md) を読む
+3. Agent Teamsプロンプトを実行
 
 ---
 

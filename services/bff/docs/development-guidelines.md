@@ -839,6 +839,64 @@ err = q.CreateUser(ctx, sqlc.CreateUserParams{
 
 ---
 
+## Git ブランチ戦略
+
+### ブランチモデル: GitHub Flow
+
+**main ブランチ**: 常にデプロイ可能な状態を維持
+
+### ブランチ命名規則
+
+**形式:**
+```
+<type>/<issue-number>-<short-description>
+```
+
+**Type:**
+- `feature/` - 新機能
+- `fix/` - バグ修正
+- `refactor/` - リファクタリング
+- `chore/` - ビルド・設定変更
+
+**例:**
+- `feature/123-merchant-list`
+- `fix/456-filter-bug`
+- `refactor/789-api-client`
+- `chore/234-update-deps`
+
+### ワークフロー
+
+**1. mainから新ブランチ作成**
+```bash
+git checkout main
+git pull origin main
+git checkout -b feature/123-merchant-api
+```
+
+**2. 開発・コミット**
+```bash
+git add .
+git commit -m "feat(merchant): 加盟店一覧APIを実装"
+```
+
+**3. Pull Request作成**
+- レビュー依頼
+- CI/CD自動実行（lint, test, build）
+
+**4. レビュー承認後マージ**
+- **Squash Merge推奨** (コミット履歴を整理)
+- マージ後はブランチ削除
+
+### マージ方針
+
+| ケース | マージ方法 | 理由 |
+|--------|-----------|------|
+| 通常のPR | Squash Merge | 履歴をクリーンに保つ |
+| Revert | Revert Merge | 履歴を明示的に残す |
+| 緊急修正 | 直接main (禁止) | 必ずPRを経由 |
+
+---
+
 ## Git コミット規約
 
 ### コミットメッセージ形式

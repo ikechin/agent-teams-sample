@@ -150,7 +150,85 @@ tasklist.mdから以下を確認:
 docs/ENVIRONMENT.md を読み込んで、環境設定情報を確認してください。
 ```
 
-### 7. Agent Teamsプロンプトを生成・実行
+### 7. 実装対象サービスのブランチ作成（Agent Teams開始前）
+
+**重要:** Agent Teams実装を開始する前に、Orchestrator（あなた）が実装対象の各サービスでfeatureブランチを作成してください。
+
+#### 手順
+
+**1. tasklist.mdから実装対象サービスを特定**
+
+```
+tasklist.mdの「Agent別タスク分担」セクションを確認し、
+以下のいずれかのAgentが担当するサービスを特定：
+- Frontend Agent → services/frontend/
+- BFF Agent → services/bff/
+- Backend Agent → services/backend/
+```
+
+**2. 各サービスでブランチ作成**
+
+各サービスのディレクトリに移動し、mainから新しいfeatureブランチを作成します。
+
+**ブランチ命名規則:**
+```
+feature/<issue-number>-<task-name>
+```
+
+**例: Frontend→BFF実装の場合**
+```bash
+# Frontendブランチ作成
+cd services/frontend
+git checkout main
+git pull origin main
+git checkout -b feature/1-frontend-bff-impl
+cd ../..
+
+# BFFブランチ作成
+cd services/bff
+git checkout main
+git pull origin main
+git checkout -b feature/1-frontend-bff-impl
+cd ../..
+```
+
+**例: 全サービス実装の場合**
+```bash
+# Frontend
+cd services/frontend && git checkout main && git pull origin main && git checkout -b feature/2-full-implementation && cd ../..
+
+# BFF
+cd services/bff && git checkout main && git pull origin main && git checkout -b feature/2-full-implementation && cd ../..
+
+# Backend
+cd services/backend && git checkout main && git pull origin main && git checkout -b feature/2-full-implementation && cd ../..
+```
+
+**3. ブランチ作成の確認**
+```bash
+# 各サービスのブランチを確認
+cd services/frontend && git branch && cd ../..
+cd services/bff && git branch && cd ../..
+cd services/backend && git branch && cd ../..
+```
+
+**4. Agent Teamsへの指示**
+
+Agent Teams起動時に、各Agentに以下を明示的に指示してください：
+```
+- Frontend Agent: services/frontend/ の feature/<ブランチ名> で作業
+- BFF Agent: services/bff/ の feature/<ブランチ名> で作業
+- Backend Agent: services/backend/ の feature/<ブランチ名> で作業
+```
+
+#### 注意事項
+
+- **mainブランチでの直接作業は禁止**
+- **全Agentが同じブランチ名を使用** (例: `feature/1-frontend-bff-impl`)
+- **ブランチ作成後は各Agentに現在のブランチを確認させる** (`git branch --show-current`)
+- **実装完了後は各サービスで個別にPRを作成**
+
+### 8. Agent Teamsプロンプトを生成・実行
 
 以下のプロンプトを実行してください（`$1` を実際の引数に置き換え）：
 
@@ -159,19 +237,30 @@ Agent Teamsを使用して、以下のタスクを並行実装してください
 
 タスク定義: .steering/$1/tasklist.md
 
+**重要: ブランチ確認**
+各Agentは作業開始前に必ず以下を実行してください：
+1. 現在のブランチを確認: `git branch --show-current`
+2. featureブランチにいることを確認（mainブランチでの作業は禁止）
+3. ブランチ名が正しいことを確認
+
+**ブランチ情報:**
+- Frontend Agent: services/frontend/ の feature/<ブランチ名>
+- BFF Agent: services/bff/ の feature/<ブランチ名>
+- Backend Agent: services/backend/ の feature/<ブランチ名>
+
 必須確認ドキュメント:
 1. .steering/$1/requirements.md - 要求定義
 2. .steering/$1/design.md - 設計
 3. .steering/$1/tasklist.md - タスクリスト
 4. docs/ENVIRONMENT.md - 環境設定
 5. contracts/openapi/ または contracts/proto/ - API仕様
+6. services/{service}/CLAUDE.md - サービス別開発ルール
+7. services/{service}/docs/development-guidelines.md - Git規約含む
 
 Agent構成は tasklist.md の「Agent別タスク分担」セクションを参照してください。
-各Agentの担当範囲、タスク、参照ドキュメントが記載されています。
 
-実装順序と依存関係は tasklist.md の「Agent間の依存関係」セクションを参照してください。
-
-各Agentは進捗をtasklist.mdのチェックボックスで報告してください。
+実装完了後、各Agentは担当サービスのブランチでコミットし、
+Orchestratorが統合確認後に各サービスでPRを作成します。
 ```
 
 ---

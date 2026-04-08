@@ -1,5 +1,32 @@
 # 初回セットアップ タスクリスト
 
+## 🎯 現在の実装対象
+
+**ステアリングディレクトリ:** `.steering/20250407-frontend-bff-only/`
+
+**タスク名:** Frontend→BFF Agent Teams実装（Backend除外）
+
+**スコープ:**
+- ✅ Frontend: ログイン画面、ダッシュボード、加盟店一覧画面
+- ✅ BFF: 認証API（login/logout/me）、加盟店一覧API（モックデータ返却）
+- ✅ E2E Test: ログインフロー、加盟店一覧表示テスト
+- ❌ Backend: 次回タスクで実装（今回は除外）
+
+**目的:** Agent Teams機能の挙動確認のため、最小限のスコープで実装
+
+**ドキュメント:**
+- [requirements.md](../.steering/20250407-frontend-bff-only/requirements.md) - 要求定義
+- [design.md](../.steering/20250407-frontend-bff-only/design.md) - 設計
+- [tasklist.md](../.steering/20250407-frontend-bff-only/tasklist.md) - Agent別タスク一覧
+
+**実装開始方法:**
+```
+/start-implementation
+```
+または [docs/QUICKSTART.md](QUICKSTART.md) を参照
+
+---
+
 ## 概要
 
 このドキュメントは、加盟店契約管理システムの初回セットアップ作業のタスクリストです。

@@ -21,6 +21,51 @@ description: Guide user through planning a new task and create steering files
 - **既存機能への影響**: 破壊的変更はあるか？
 - **他のタスク・機能との依存関係**: あるか？
 
+### 2.5 タスクサイズ判定
+
+以下の質問でタスクの規模を判定します：
+
+- **影響するファイル数（見積もり）**: 10未満 / 10-30 / 30以上
+- **実装工数（見積もり）**: 1-3日 / 3-7日 / 7日以上
+- **各Agentのタスク数（見積もり）**: 5未満 / 5-10 / 10以上
+- **複数の独立した機能を含むか**: はい / いいえ
+
+#### 🚨 分割推奨の判定
+
+以下の**いずれか1つでも該当**する場合、タスク分割を推奨します：
+
+- ✅ 影響するファイル数が **30以上**
+- ✅ 実装工数が **7日以上**
+- ✅ 各Agentのタスク数が **10以上**
+- ✅ API契約の破壊的変更 + DB変更が**同時発生**
+- ✅ 複数の独立した機能を**同時実装**
+
+**推奨される分割パターン:**
+
+1. **フェーズ分割** - API/Backend → Frontend
+   ```
+   .steering/[YYYYMMDD]-[タスク名]-phase1-api/
+   .steering/[YYYYMMDD]-[タスク名]-phase2-ui/
+   ```
+
+2. **サービス分割** - Backend → BFF → Frontend
+   ```
+   .steering/[YYYYMMDD]-[タスク名]-backend/
+   .steering/[YYYYMMDD]-[タスク名]-bff/
+   .steering/[YYYYMMDD]-[タスク名]-frontend/
+   ```
+
+3. **機能分割** - MVP単位で分解
+   ```
+   .steering/[YYYYMMDD]-[機能A]/
+   .steering/[YYYYMMDD]-[機能B]/
+   ```
+
+**分割時の注意点:**
+- 各ステアリングの`requirements.md`に前提となる他のステアリングを明記
+- 依存関係を明確にし、実装順序を定義
+- 共通のAPI契約は最初のステアリングで確定させる
+
 ### 3. 技術的変更点
 
 #### 3.1 API契約
@@ -68,12 +113,13 @@ description: Guide user through planning a new task and create steering files
 
 1. **ヒアリング開始**: 上記の項目を順番に質問
 2. **回答の整理**: 収集した情報を構造化
-3. **ステアリングディレクトリ作成**: `.steering/[YYYYMMDD]-[タスク名]/`
-4. **ファイル生成**:
-   - `requirements.md`: タスクの要求内容
+3. **タスクサイズ判定**: 分割が必要か判断し、必要な場合は分割方法を提案
+4. **ステアリングディレクトリ作成**: `.steering/[YYYYMMDD]-[タスク名]/`
+5. **ファイル生成**:
+   - `requirements.md`: タスクの要求内容（依存する他のステアリングを明記）
    - `design.md`: 実装設計
    - `tasklist.md`: Agent別タスクリスト
-5. **永続的ドキュメント更新提案**: `docs/`の更新が必要な場合は提案
+6. **永続的ドキュメント更新提案**: `docs/`の更新が必要な場合は提案
    - `docs/glossary.md`: 新規ユビキタス言語の追加
    - `docs/service-contracts.md`: API契約の更新
    - その他関連ドキュメント

@@ -65,7 +65,7 @@
 - [ ] .env.example作成
 
 #### データベース
-- [ ] Flywayマイグレーション作成
+- [ ] Flywayマイグレーションファイル作成（`services/bff/db/migrations/`）
   - [ ] V1__create_users.sql
   - [ ] V2__create_roles.sql
   - [ ] V3__create_permissions.sql
@@ -75,15 +75,18 @@
   - [ ] V7__seed_roles.sql
   - [ ] V8__seed_permissions.sql
   - [ ] V9__seed_role_permissions.sql
-  - [ ] V10__seed_users.sql（テストユーザー: test@example.com）
-- [ ] Flywayマイグレーション実行
-- [ ] sqlcクエリ定義作成（db/queries/）
+  - [ ] V10__seed_users.sql（テストユーザー: test@example.com / password123）
+- [ ] Flywayマイグレーション実行確認
+  - **実行方法**: `docker compose up bff-flyway` でDocker起動時に自動実行
+  - bff-flywayコンテナが正常終了し、テーブルが作成されていることを確認
+  - `docker compose exec bff-db psql -U user -d bff_db -c "\dt"` でテーブル確認
+- [ ] sqlcクエリ定義作成（`services/bff/db/queries/`）
   - [ ] user.sql
   - [ ] session.sql
   - [ ] role.sql
   - [ ] permission.sql
   - [ ] audit_log.sql
-- [ ] sqlc generate実行
+- [ ] sqlc generate実行（`cd services/bff && sqlc generate`）
 
 #### 認証API実装
 - [ ] ドメインモデル作成（internal/model/）
@@ -142,18 +145,27 @@
 **担当範囲:** `e2e/`
 
 #### 環境セットアップ
-- [ ] Playwrightインストール
+- [ ] Playwrightインストール（`npm install --save-dev @playwright/test`）
 - [ ] playwright.config.ts設定
+  - [ ] baseURL設定: `http://localhost:3000`（Frontend URL）
+  - [ ] テストブラウザ設定（chromium, firefox, webkit）
+  - [ ] スクリーンショット設定（失敗時のみ）
+  - [ ] タイムアウト設定（30秒）
+- [ ] 環境変数ファイル作成（`e2e/.env`）
+  - [ ] `FRONTEND_URL=http://localhost:3000`
+  - [ ] `BFF_URL=http://localhost:8080`
+  - [ ] `TEST_USER_EMAIL=test@example.com`
+  - [ ] `TEST_USER_PASSWORD=password123`
 - [ ] Docker Compose設定（`e2e/docker-compose.yml`）
-  - [ ] frontend（Next.js）
-  - [ ] bff（Go server）
-  - [ ] bff-db（PostgreSQL）
+  - [ ] frontend（Next.js、ポート3000）
+  - [ ] bff（Go server、ポート8080）
+  - [ ] bff-db（PostgreSQL、ポート5432）
   - [ ] bff-flyway（Flyway migration）
   - [ ] ネットワーク設定（サービス間通信）
-- [ ] テストヘルパー関数作成（e2e/utils/test-helpers.ts）
-  - [ ] login()
-  - [ ] logout()
-  - [ ] waitForElement()
+- [ ] テストヘルパー関数作成（`e2e/utils/test-helpers.ts`）
+  - [ ] login(page, email, password)
+  - [ ] logout(page)
+  - [ ] waitForElement(page, selector)
 
 #### ログインフローテスト
 - [ ] e2e/tests/auth/login-flow.spec.ts実装

@@ -185,6 +185,20 @@
    - Backendコンテナは起動しない
    - モックデータの表示確認のみ
 
+### 環境設定
+
+#### ポート番号
+- **Frontend**: `http://localhost:3000`
+- **BFF**: `http://localhost:8080`
+- **BFF DB**: `localhost:5432`（PostgreSQL）
+
+#### 環境変数
+- Frontend環境変数（`.env.local`）:
+  - `NEXT_PUBLIC_BFF_API_URL=http://localhost:8080`
+- BFF環境変数（`.env`）:
+  - `PORT=8080`
+  - `DATABASE_URL=postgres://user:password@localhost:5432/bff_db`
+
 ---
 
 ## 非機能要件

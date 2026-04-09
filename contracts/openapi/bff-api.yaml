@@ -55,7 +55,7 @@ paths:
               description: Session cookie (HttpOnly, Secure, SameSite=Lax)
               schema:
                 type: string
-                example: session_id=abc123; HttpOnly; Secure; SameSite=Lax; Max-Age=86400
+                example: session_token=abc123; HttpOnly; Secure; SameSite=Lax; Max-Age=86400
           content:
             application/json:
               schema:
@@ -95,7 +95,7 @@ paths:
               description: Cleared session cookie
               schema:
                 type: string
-                example: session_id=; HttpOnly; Secure; SameSite=Lax; Max-Age=0
+                example: session_token=; HttpOnly; Secure; SameSite=Lax; Max-Age=0
           content:
             application/json:
               schema:
@@ -201,7 +201,7 @@ components:
     sessionAuth:
       type: apiKey
       in: cookie
-      name: session_id
+      name: session_token
       description: Session-based authentication using HttpOnly cookies
 
   schemas:

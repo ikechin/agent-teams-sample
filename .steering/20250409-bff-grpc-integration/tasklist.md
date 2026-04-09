@@ -1,8 +1,14 @@
 # BFF gRPC統合 (Phase 2) - タスクリスト
 
-## Agent別タスク分担
+## 実装方針
 
-### BFF Agent
+**通常のClaude Code（単一Agent）で実装する。**
+BFF Agent単体の作業であり、Agent Teamsを使用するとコストが増大するため。
+以下のタスクリストは実装ガイドとして使用する。
+
+## タスク分担
+
+### BFF Agent（単一Agent実行）
 
 **担当範囲:** `services/bff/`
 
@@ -21,7 +27,8 @@
 #### MerchantHandler 改修
 - [ ] `mockMerchants` 変数と `filterMerchants` 関数を削除
 - [ ] 構造体に `pb.MerchantServiceClient` フィールド追加
-- [ ] `NewMerchantHandler` の引数変更（gRPCクライアント追加）
+- [ ] `permissionService` の型を `*service.PermissionService` → `service.PermissionServiceInterface` に変更（テスタビリティ向上）
+- [ ] `NewMerchantHandler` の引数変更（gRPCクライアント追加、PermissionServiceInterface型）
 - [ ] `merchantToMap` ヘルパー関数作成（pb.Merchant → map変換）
 - [ ] `handleGRPCError` ヘルパー関数作成（gRPCステータス → HTTPステータス変換）
 - [ ] `ListMerchants` をgRPC呼び出しに置換
@@ -42,13 +49,15 @@
 - [ ] グレースフルシャットダウン時にgRPCクライアントClose
 
 #### Docker Compose・環境設定
+- [ ] docker-compose.yml の `version: '3.8'` キーを削除（非推奨）
 - [ ] docker-compose.yml に外部ネットワーク追加（backend_default）
 - [ ] BACKEND_GRPC_ADDR 環境変数追加
 - [ ] .env.example に BACKEND_GRPC_ADDR 追加
 
-#### 権限マイグレーション（必要な場合）
-- [ ] `merchants:create` 権限がBFF DBに存在するか確認
-- [ ] 存在しない場合、Flywayマイグレーション追加
+#### 権限マイグレーション
+- [x] `merchants:create` 権限がBFF DBに存在するか確認 → **確認済み: 追加不要**
+  - V8__seed_permissions.sql で定義済み
+  - V9__seed_role_permissions.sql で system-admin, contract-manager に付与済み
 
 #### テスト
 - [ ] `internal/handler/merchant_handler_test.go` 作成

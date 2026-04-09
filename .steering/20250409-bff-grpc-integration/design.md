@@ -142,6 +142,9 @@ type MerchantHandler struct {
 }
 
 // 変更後
+// 注: permissionServiceは現行コードで具体型（*service.PermissionService）だが、
+// テスタビリティのためインターフェース（service.PermissionServiceInterface）に変更する。
+// PermissionServiceInterfaceは既に定義済み（internal/service/permission_service.go）。
 type MerchantHandler struct {
     backendClient     pb.MerchantServiceClient
     permissionService service.PermissionServiceInterface
@@ -292,20 +295,8 @@ func (h *MerchantHandler) handleGRPCError(c echo.Context, err error, defaultMsg 
 
 ### protoc生成コマンド（services/bff/ 内で実行）
 
-```bash
-protoc \
-  --proto_path=../../contracts/proto \
-  --go_out=./internal/pb --go_opt=paths=source_relative \
-  --go-grpc_out=./internal/pb --go-grpc_opt=paths=source_relative \
-  ../../contracts/proto/merchant.proto
-```
-
-### go_package
-
-`contracts/proto/merchant.proto` の `go_package` は `github.com/ikechin/agent-teams-backend/internal/pb` になっている。
-BFFではこのパッケージパスのまま生成コードを使用する。
-
-**注意:** BFF用にgo_packageを変更する必要がある場合は、BFF専用の生成スクリプトで `--go_opt=Mmerchant.proto=github.com/ikechin/agent-teams-bff/internal/pb` を指定する。
+`contracts/proto/merchant.proto` の `go_package` は `github.com/ikechin/agent-teams-backend/internal/pb` になっているため、
+BFF用に `M` オプションでパッケージパスをオーバーライドする。
 
 ```bash
 protoc \
@@ -321,10 +312,16 @@ protoc \
 
 ## Docker Compose設定変更
 
+### 変更内容
+
+1. `version: '3.8'` キーを削除（Docker Compose V2で非推奨）
+2. 外部ネットワーク追加（Backend接続用）
+3. `BACKEND_GRPC_ADDR` 環境変数追加
+
 ### 外部ネットワーク追加
 
 ```yaml
-# services/bff/docker-compose.yml に追加
+# services/bff/docker-compose.yml に追加（version キーは削除）
 
 services:
   bff:

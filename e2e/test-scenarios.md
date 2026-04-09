@@ -33,14 +33,13 @@
 
 **前提条件:**
 - テストユーザーが存在する（`test@example.com` / `password123`）
+- Frontend（Next.js）がポート3000で起動している
+- BFF（Go Echo）がポート8080で起動している
 
 **テストケース:**
-1. 正常にログインできる
-2. メールアドレスが空の場合エラーが表示される
-3. パスワードが空の場合エラーが表示される
-4. 不正な認証情報の場合エラーが表示される
-5. ログイン後、ログアウトできる
-6. 未認証でダッシュボードにアクセスするとログイン画面にリダイレクトされる
+1. 正常系: ログイン成功 → ダッシュボードにリダイレクト
+2. 異常系: パスワード誤り → エラーメッセージ表示
+3. 異常系: 未認証で/dashboardアクセス → /loginにリダイレクト
 
 **テストデータ:**
 ```json
@@ -49,8 +48,8 @@
     "email": "test@example.com",
     "password": "password123"
   },
-  "invalidUser": {
-    "email": "invalid@example.com",
+  "invalidPassword": {
+    "email": "test@example.com",
     "password": "wrongpassword"
   }
 }
@@ -87,9 +86,44 @@
 
 ### 2. 加盟店管理（Merchant Management）
 
-#### 2.1 加盟店CRUD操作
+#### 2.1 加盟店一覧表示
 **優先度:** High
-**実装状況:** ✅ 実装済み（`tests/merchants/merchant-crud.spec.ts`）
+**実装状況:** ✅ 実装済み（`tests/merchants/merchant-list.spec.ts`）
+
+**前提条件:**
+- ログイン済みユーザー（`merchants:read` 権限、contract-managerロール）
+- BFFが加盟店APIモックデータを返却する状態
+
+**テストケース:**
+1. ログイン後に加盟店一覧画面にアクセスできること
+2. モックデータ（2件: テスト加盟店1、テスト加盟店2）が表示されること
+3. テーブルの各カラム（加盟店コード、名前、住所、担当者）が表示されること
+
+**テストデータ（BFFモック）:**
+```json
+{
+  "merchants": [
+    {
+      "merchant_code": "M-00001",
+      "name": "テスト加盟店1",
+      "address": "東京都渋谷区渋谷1-1-1",
+      "contact_person": "山田太郎"
+    },
+    {
+      "merchant_code": "M-00002",
+      "name": "テスト加盟店2",
+      "address": "東京都新宿区新宿2-2-2",
+      "contact_person": "佐藤花子"
+    }
+  ]
+}
+```
+
+---
+
+#### 2.2 加盟店CRUD操作（次回実装）
+**優先度:** High
+**実装状況:** ❌ 未実装（Backend実装後に対応）
 
 **前提条件:**
 - ログイン済みユーザー（`merchants:create`, `merchants:update`, `merchants:delete` 権限）
@@ -582,5 +616,5 @@ npm run test
 
 ---
 
-**最終更新日:** 2026-04-05
+**最終更新日:** 2026-04-09
 **作成者:** Claude Code

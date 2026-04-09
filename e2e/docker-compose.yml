@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # PostgreSQL (BFF用)
   bff-db:
@@ -64,10 +62,11 @@ services:
     build:
       context: ../services/frontend
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_BFF_API_URL: http://localhost:8080
     ports:
       - "3000:3000"
     environment:
-      NEXT_PUBLIC_BFF_API_URL: http://bff:8080
       NODE_ENV: production
     depends_on:
       - bff

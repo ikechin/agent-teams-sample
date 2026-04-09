@@ -9,7 +9,7 @@ description: Review steering files quality and readiness before implementation
 
 ## Parameters
 
-- ``: ステアリングディレクトリ名（例: `20250409-add-backend-phase1`）
+- `$1`: ステアリングディレクトリ名（例: `20250409-add-backend-phase1`）
 
 ## 使用方法
 
@@ -46,9 +46,9 @@ ls -1 .steering/
 
 以下のファイルをすべて読み込んでください：
 ```
-.steering/<name>/requirements.md
-.steering/<name>/design.md
-.steering/<name>/tasklist.md
+.steering/$1/requirements.md
+.steering/$1/design.md
+.steering/$1/tasklist.md
 ```
 
 ### 3. 関連ドキュメントの読み込み
@@ -266,7 +266,7 @@ contracts/proto/*.proto（存在する場合）
 # Steering Review Report
 
 ## Summary
-- ステアリング: .steering/<name>/
+- ステアリング: .steering/$1/
 - レビュー実施日: YYYY-MM-DD
 - 判定: ✅ 承認 / ⚠️ 修正推奨 / ❌ 要修正
 - Agent Teams準備状態: ✅ Ready / ⚠️ Conditional / ❌ Not Ready
@@ -316,7 +316,7 @@ contracts/proto/*.proto（存在する場合）
 
 ## 注意事項
 
-- レビュー結果は `.steering/<name>/steering-review.md` として保存します
+- レビュー結果は `.steering/$1/steering-review.md` として保存します
 - ❌（要修正）がある場合は、修正後に再度レビューを実行してください
 - Agent Teams準備状態が ❌ Not Ready の場合は `/start-implementation` を実行しないでください
 - レビュー後にステアリングファイルを修正した場合は、mainブランチにコミット・プッシュしてください

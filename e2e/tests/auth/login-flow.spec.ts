@@ -8,8 +8,8 @@ test.describe('ログインフロー', () => {
 
   test('正常系: ログイン成功 → ダッシュボードにリダイレクト', async ({ page }) => {
     // メールアドレスとパスワードを入力
-    await page.fill('[name="email"]', 'test@example.com');
-    await page.fill('[name="password"]', 'password123');
+    await page.fill('[name="email"]', process.env.TEST_USER_EMAIL || 'test@example.com');
+    await page.fill('[name="password"]', process.env.TEST_USER_PASSWORD || 'password123');
 
     // ログインボタンをクリック
     await page.click('button[type="submit"]');
@@ -23,7 +23,7 @@ test.describe('ログインフロー', () => {
 
   test('異常系: パスワード誤り → エラーメッセージ表示', async ({ page }) => {
     // 正しいメールアドレスと誤ったパスワードを入力
-    await page.fill('[name="email"]', 'test@example.com');
+    await page.fill('[name="email"]', process.env.TEST_USER_EMAIL || 'test@example.com');
     await page.fill('[name="password"]', 'wrongpassword');
 
     // ログインボタンをクリック

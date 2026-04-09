@@ -4,7 +4,7 @@ import { login, waitForElement } from '../../utils/test-helpers';
 test.describe('加盟店一覧表示', () => {
   test.beforeEach(async ({ page }) => {
     // テストユーザーでログイン
-    await login(page, 'test@example.com', 'password123');
+    await login(page, process.env.TEST_USER_EMAIL || 'test@example.com', process.env.TEST_USER_PASSWORD || 'password123');
   });
 
   test('ログイン後に加盟店一覧画面にアクセスできること', async ({ page }) => {

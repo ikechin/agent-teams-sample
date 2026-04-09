@@ -33,8 +33,10 @@ else
 fi
 
 # 現在のステアリングタスク（最新）
-if [ -d ".steering" ]; then
-    LATEST_STEERING=$(ls -1t .steering/ 2>/dev/null | head -1)
+# Gitルートディレクトリから.steeringを探す
+GIT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
+if [ -n "$GIT_ROOT" ] && [ -d "$GIT_ROOT/.steering" ]; then
+    LATEST_STEERING=$(ls -1t "$GIT_ROOT/.steering/" 2>/dev/null | head -1)
     if [ -n "$LATEST_STEERING" ]; then
         TASK="📋 $LATEST_STEERING"
     else

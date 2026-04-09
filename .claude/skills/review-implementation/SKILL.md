@@ -178,16 +178,97 @@ description: Review implementation against steering files specification
 
 ## レビュー実行フロー
 
-1. **ステアリングファイル読み込み**: `.steering/$1/` 配下の全ファイルを読み込む
-2. **対象サービス特定**: requirements.md から影響範囲を確認
-3. **実装コード読み込み**: 対象サービスのコードを読み込む
-4. **チェックリスト実行**: 上記9カテゴリのレビュー項目を順次チェック
-5. **問題点のレポート**:
-   - **Critical（重大）**: セキュリティ脆弱性、J-SOX違反、仕様の重大な逸脱
-   - **High（高）**: 機能不足、パフォーマンス問題、API契約違反
-   - **Medium（中）**: コード品質問題、用語不統一、ドキュメント未更新
-   - **Low（軽微）**: コードスタイル、コメント不足
-6. **改善提案**: 問題点の修正方法を具体的に提案
+### コンテキスト節約の原則
+
+**全ファイルをReadで読み込むのではなく、`git diff` で差分を特定してからレビューする。**
+これによりコンテキストウィンドウの消費を大幅に削減できる。
+
+### 手順
+
+#### ステップ1: ステアリングファイル読み込み（必須）
+
+`.steering/$1/` 配下の3ファイルを読み込む。これはレビュー基準となるため全文読み込みが必要。
+
+```
+Read .steering/$1/requirements.md
+Read .steering/$1/design.md
+Read .steering/$1/tasklist.md
+```
+
+#### ステップ2: 対象サービスと差分の特定
+
+requirements.md から対象サービスを特定し、**`git diff` で変更差分を取得する**。
+全ファイルをReadするのではなく、差分ベースでレビューを行う。
+
+**サブモジュールの場合（各サービスが独立リポジトリ）:**
+```bash
+# 対象サブモジュールに移動してfeatureブランチの差分を取得
+cd services/{service}
+git diff main...HEAD          # mainからの全変更差分
+git diff main...HEAD --stat   # 変更ファイル一覧（概要把握用）
+```
+
+**親リポジトリの場合:**
+```bash
+git diff main...HEAD
+git diff main...HEAD --stat
+```
+
+**差分が大きい場合の段階的アプローチ:**
+```bash
+# 1. まず変更ファイル一覧で全体像を把握
+git diff main...HEAD --stat
+
+# 2. ファイル種別ごとに差分を確認（コンテキスト節約）
+git diff main...HEAD -- '*.go' --no-ext-diff     # Goソースのみ
+git diff main...HEAD -- '*.sql'                    # SQLのみ
+git diff main...HEAD -- '*.yaml' '*.yml'           # 設定ファイルのみ
+git diff main...HEAD -- 'Dockerfile' 'Makefile'    # ビルド関連のみ
+
+# 3. 特定ファイルを深堀りする必要がある場合のみReadを使用
+#    （差分だけでは前後のコンテキストが不足する場合）
+```
+
+#### ステップ3: 静的解析・テスト実行
+
+差分の読み込みと並行して、自動チェックを実行する。
+
+```bash
+# Go の場合
+go test ./... -v -count=1     # テスト実行
+go vet ./...                   # 静的解析
+go fmt ./...                   # フォーマットチェック（差分があれば問題）
+
+# Frontend (Next.js/React) の場合
+npm run type-check             # 型チェック
+npm run lint                   # ESLint
+npm run test                   # テスト
+
+# BFF (Go + Echo) の場合
+go test ./... -v -count=1
+go vet ./...
+```
+
+#### ステップ4: 差分ベースでチェックリスト実行
+
+`git diff` の出力をもとに、上記9カテゴリのレビュー項目をチェックする。
+
+**差分だけでは判断できない場合のみ**、`Read` で特定ファイルの特定行を読む：
+```
+Read file_path offset=100 limit=30   # 必要な箇所のみ、行範囲を絞って読む
+```
+
+#### ステップ5: 問題点のレポート
+
+問題点を重要度別に分類して報告する：
+- **Critical（重大）**: セキュリティ脆弱性、J-SOX違反、仕様の重大な逸脱
+- **High（高）**: 機能不足、パフォーマンス問題、API契約違反
+- **Medium（中）**: コード品質問題、用語不統一、ドキュメント未更新
+- **Low（軽微）**: コードスタイル、コメント不足
+
+#### ステップ6: 改善提案
+
+問題点の修正方法を具体的に提案する。`git diff` の差分行番号を参照して場所を特定する。
 
 ---
 

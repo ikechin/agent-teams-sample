@@ -33,12 +33,28 @@ else
 fi
 
 # 現在のステアリングタスク（最新）
-# Gitルートディレクトリから.steeringを探す
+# サブモジュール対応: 親リポジトリの.steeringを探す
 GIT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
-if [ -n "$GIT_ROOT" ] && [ -d "$GIT_ROOT/.steering" ]; then
-    LATEST_STEERING=$(ls -1t "$GIT_ROOT/.steering/" 2>/dev/null | head -1)
-    if [ -n "$LATEST_STEERING" ]; then
-        TASK="📋 $LATEST_STEERING"
+
+if [ -n "$GIT_ROOT" ]; then
+    # まず現在のGitルートで.steeringを確認（親リポジトリの場合）
+    if [ -d "$GIT_ROOT/.steering" ]; then
+        STEERING_DIR="$GIT_ROOT/.steering"
+    # サブモジュールの場合、親リポジトリの.steeringを探す
+    # services/frontend/ → ../../.steering/
+    elif [ -d "$GIT_ROOT/../../.steering" ]; then
+        STEERING_DIR="$GIT_ROOT/../../.steering"
+    else
+        STEERING_DIR=""
+    fi
+
+    if [ -n "$STEERING_DIR" ]; then
+        LATEST_STEERING=$(ls -1t "$STEERING_DIR" 2>/dev/null | head -1)
+        if [ -n "$LATEST_STEERING" ]; then
+            TASK="📋 $LATEST_STEERING"
+        else
+            TASK=""
+        fi
     else
         TASK=""
     fi

@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package merchant;
+
+option go_package = "github.com/ikechin/agent-teams-backend/internal/pb";
+
+service MerchantService {
+  rpc ListMerchants(ListMerchantsRequest) returns (ListMerchantsResponse);
+  rpc GetMerchant(GetMerchantRequest) returns (MerchantResponse);
+  rpc CreateMerchant(CreateMerchantRequest) returns (MerchantResponse);
+}
+
+message Merchant {
+  string merchant_id = 1;
+  string merchant_code = 2;
+  string name = 3;
+  string address = 4;
+  string contact_person = 5;
+  string phone = 6;
+  string email = 7;
+  bool is_active = 8;
+  string created_at = 9;
+  string updated_at = 10;
+}
+
+message ListMerchantsRequest {
+  int32 page = 1;
+  int32 limit = 2;
+  string search = 3;
+}
+
+message ListMerchantsResponse {
+  repeated Merchant merchants = 1;
+  Pagination pagination = 2;
+}
+
+message Pagination {
+  int32 current_page = 1;
+  int32 total_pages = 2;
+  int32 total_items = 3;
+  int32 items_per_page = 4;
+}
+
+message GetMerchantRequest {
+  string merchant_id = 1;
+}
+
+message CreateMerchantRequest {
+  string name = 1;
+  string address = 2;
+  string contact_person = 3;
+  string phone = 4;
+  string email = 5;
+  string created_by = 6; // user_id from BFF (for audit)
+}
+
+message MerchantResponse {
+  Merchant merchant = 1;
+}

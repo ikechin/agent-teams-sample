@@ -90,9 +90,37 @@ message MerchantResponse {
 ```
 
 ### 配置
-- 定義ファイル: `contracts/proto/merchant.proto`
+- 定義ファイル: `contracts/proto/merchant.proto`（親リポジトリに配置済み）
 - 生成コード: `services/backend/internal/pb/`
-- 生成コマンド: `protoc --go_out=. --go-grpc_out=. contracts/proto/merchant.proto`
+
+### protoc生成手順
+
+**前提: protocプラグインのインストール**
+```bash
+go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+```
+
+**生成コマンド（services/backend/ 内で実行）:**
+```bash
+cd services/backend
+protoc \
+  --proto_path=../../contracts/proto \
+  --go_out=./internal/pb --go_opt=paths=source_relative \
+  --go-grpc_out=./internal/pb --go-grpc_opt=paths=source_relative \
+  ../../contracts/proto/merchant.proto
+```
+
+または Makefile に定義:
+```makefile
+.PHONY: proto
+proto:
+	protoc \
+		--proto_path=../../contracts/proto \
+		--go_out=./internal/pb --go_opt=paths=source_relative \
+		--go-grpc_out=./internal/pb --go-grpc_opt=paths=source_relative \
+		../../contracts/proto/merchant.proto
+```
 
 ---
 
@@ -122,6 +150,11 @@ CREATE INDEX idx_merchants_is_active ON merchants(is_active);
 ```
 
 #### contract_changes テーブル（監査用）
+
+**注記:** `docs/jsox-compliance.md` では `contract_id` 列を持つ契約特化型の設計だが、
+Phase 1では加盟店登録の監査にも使用するため `resource_type + resource_id` の汎用形式を採用。
+将来のPhaseで契約管理を追加する際に、`contract_id` 列をNULLABLEで追加し、
+契約関連の変更は `contract_id` でも検索可能にする予定。
 
 ```sql
 CREATE TABLE contract_changes (
@@ -272,6 +305,22 @@ services:
       backend-flyway:
         condition: service_completed_successfully
 ```
+
+---
+
+## gRPC Reflection Service
+
+grpcurlでの動作確認のため、gRPC reflection serviceを有効化する。
+
+```go
+// cmd/server/main.go
+import "google.golang.org/grpc/reflection"
+
+// サーバー起動時に登録
+reflection.Register(grpcServer)
+```
+
+これにより `grpcurl -plaintext localhost:50051 list` でサービス一覧を取得可能。
 
 ---
 

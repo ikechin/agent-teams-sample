@@ -19,9 +19,10 @@
 - [ ] .gitignore作成
 
 #### Protocol Buffers
-- [ ] `contracts/proto/merchant.proto` 作成（親リポジトリ）
+- [x] `contracts/proto/merchant.proto` 配置済み（親リポジトリ、Orchestratorが事前作成）
+- [ ] protoc-gen-go / protoc-gen-go-grpc インストール
 - [ ] protoc生成コード配置（`internal/pb/`）
-- [ ] 生成コマンドをMakefile or スクリプトに定義
+- [ ] 生成コマンドをMakefile に定義（design.md参照）
 
 #### データベース
 - [ ] Flywayマイグレーションファイル作成（`db/migrations/`）
@@ -59,6 +60,7 @@
   - [ ] ロガー初期化
   - [ ] gRPCサーバー起動
   - [ ] gRPC Health Checking Protocol実装
+  - [ ] gRPC Reflection Service登録（grpcurl動作確認用）
   - [ ] グレースフルシャットダウン
 
 #### テスト

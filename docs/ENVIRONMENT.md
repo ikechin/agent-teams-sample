@@ -11,10 +11,8 @@
 | **Frontend** | 3000 | http://localhost:3000 | Next.js開発サーバー |
 | **BFF** | 8080 | http://localhost:8080 | Go Echo APIサーバー |
 | **BFF DB** | 5432 | localhost:5432 | PostgreSQL（BFF用） |
-| **Backend** | 50051 | localhost:50051 | gRPCサーバー（次回実装） |
-| **Backend DB** | 5433 | localhost:5433 | PostgreSQL（Backend用、次回実装） |
-
-**注意:** 今回のタスク（`.steering/20250407-frontend-bff-only/`）ではBackend関連は使用しません。
+| **Backend** | 50051 | localhost:50051 | gRPCサーバー |
+| **Backend DB** | 5433 | localhost:5433 | PostgreSQL（Backend用） |
 
 ---
 
@@ -73,6 +71,31 @@ EOF
 ```
 
 **注意:** `SESSION_SECRET`は本番環境では必ず変更してください。
+
+---
+
+### Backend (`services/backend/.env`)
+
+```bash
+# サーバー設定
+PORT=50051
+
+# データベース接続
+DATABASE_URL=postgres://backend_user:backend_password@localhost:5433/backend_db?sslmode=disable
+
+# ログ設定
+LOG_LEVEL=debug
+```
+
+**作成方法:**
+```bash
+cd services/backend
+cat > .env <<EOF
+PORT=50051
+DATABASE_URL=postgres://backend_user:backend_password@localhost:5433/backend_db?sslmode=disable
+LOG_LEVEL=debug
+EOF
+```
 
 ---
 
@@ -146,6 +169,48 @@ docker compose up bff-flyway
 
 ---
 
+### Backend開発環境
+
+**ディレクトリ:** `services/backend/`
+
+**起動:**
+```bash
+cd services/backend
+docker compose up -d
+```
+
+**含まれるサービス:**
+- `backend-db`: PostgreSQL データベース（ポート5433）
+- `backend-flyway`: Flywayマイグレーション（起動時に自動実行）
+- `backend`: Go gRPCサーバー（ポート50051）
+
+**停止:**
+```bash
+docker compose down
+```
+
+**ログ確認:**
+```bash
+docker compose logs -f backend
+docker compose logs -f backend-db
+```
+
+**DB接続確認:**
+```bash
+docker compose exec backend-db psql -U backend_user -d backend_db -c "\dt"
+```
+
+**gRPC動作確認（grpcurl）:**
+```bash
+# サービス一覧
+grpcurl -plaintext localhost:50051 list
+
+# 加盟店一覧取得
+grpcurl -plaintext -d '{"page": 1, "limit": 20}' localhost:50051 merchant.MerchantService/ListMerchants
+```
+
+---
+
 ### E2E Test環境
 
 **ディレクトリ:** `e2e/`
@@ -215,7 +280,7 @@ docker compose exec bff-db psql -U bff_user -d bff_db
 
 ---
 
-### Backend Database（次回実装）
+### Backend Database
 
 ```
 Host: localhost
@@ -225,7 +290,23 @@ Username: backend_user
 Password: backend_password
 ```
 
-**注意:** 今回のタスクでは使用しません。
+**psqlで接続:**
+```bash
+psql -h localhost -p 5433 -U backend_user -d backend_db
+# パスワード: backend_password
+```
+
+**Docker Composeから接続:**
+```bash
+cd services/backend
+docker compose exec backend-db psql -U backend_user -d backend_db
+```
+
+**テーブル構造確認:**
+```sql
+\d merchants
+\d contract_changes
+```
 
 ---
 

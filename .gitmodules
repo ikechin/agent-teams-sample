@@ -1,0 +1,9 @@
+[submodule "services/frontend"]
+	path = services/frontend
+	url = https://github.com/ikechin/agent-teams-frontend.git
+[submodule "services/bff"]
+	path = services/bff
+	url = https://github.com/ikechin/agent-teams-bff.git
+[submodule "services/backend"]
+	path = services/backend
+	url = https://github.com/ikechin/agent-teams-backend.git

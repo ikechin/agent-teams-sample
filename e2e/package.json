@@ -4,17 +4,13 @@
   "description": "E2E tests for contract management system",
   "scripts": {
     "test": "playwright test",
+    "test:e2e": "playwright test",
     "test:headed": "playwright test --headed",
     "test:ui": "playwright test --ui",
     "test:debug": "playwright test --debug",
-    "test:chromium": "playwright test --project=chromium",
-    "test:firefox": "playwright test --project=firefox",
-    "test:webkit": "playwright test --project=webkit",
-    "test:mobile": "playwright test --project='Mobile Chrome' --project='Mobile Safari'",
-    "test:ci": "playwright test --project=chromium",
-    "report": "playwright show-report",
-    "seed": "ts-node utils/db-seeder.ts",
-    "clean": "ts-node utils/db-cleaner.ts"
+    "test:auth": "playwright test tests/auth/",
+    "test:merchants": "playwright test tests/merchants/",
+    "report": "playwright show-report"
   },
   "keywords": [
     "e2e",

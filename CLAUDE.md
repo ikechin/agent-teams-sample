@@ -282,14 +282,25 @@ Task 3 (Backend Agent):
 **前提条件:**
 - フェーズ1のすべてのドキュメントが完成していること
 
-### 初回セットアップ時の手順（マイクロサービス）
+### 初回セットアップ時の手順（サブモジュール構成）
 
-#### 1. フォルダ作成
+#### 1. 親リポジトリのフォルダ作成
+
 ```bash
+# 親リポジトリ（agent-teams-sample）で実行
 mkdir -p docs .steering contracts/openapi contracts/types
-mkdir -p services/{frontend,bff,backend}/{docs,.steering}
 mkdir -p e2e/tests/{auth,merchants,contracts}
 ```
+
+**⚠️ 重要: サブモジュール構成について**
+- `services/`配下はGitサブモジュールとして独立したリポジトリで管理
+- 各サービスのディレクトリ構造は、各サブモジュールリポジトリ内で個別に管理
+- 親リポジトリから`services/`内にディレクトリを作成しない
+
+**サブモジュールリポジトリ:**
+- Frontend: https://github.com/ikechin/agent-teams-frontend
+- BFF: https://github.com/ikechin/agent-teams-bff
+- Backend: https://github.com/ikechin/agent-teams-backend
 
 #### 2. ルート永続的ドキュメント作成（`docs/`）
 
@@ -305,18 +316,37 @@ mkdir -p e2e/tests/{auth,merchants,contracts}
 
 **重要：** 1ファイルごとに作成後、必ず確認・承認を得てから次のファイル作成を行う
 
-#### 3. サービス別CLAUDE.mdとドキュメント作成
+#### 3. サブモジュール内のCLAUDE.mdとドキュメント作成
 
-各サービスにCLAUDE.mdと設計ドキュメントを作成します。
+**注意:** 各サービスは独立したGitリポジトリ（サブモジュール）として管理されています。
+各サブモジュールリポジトリ内で以下のドキュメントを作成してください。
 
-1. `services/frontend/CLAUDE.md` - Frontend開発ルール
-2. `services/frontend/docs/functional-design.md` - Frontend機能設計
-3. `services/frontend/docs/repository-structure.md`
-4. `services/frontend/docs/development-guidelines.md`
+**Frontend サブモジュール (services/frontend/):**
+```bash
+cd services/frontend
+# サブモジュール内でドキュメント作成
+# 1. CLAUDE.md - Frontend開発ルール
+# 2. docs/functional-design.md - Frontend機能設計
+# 3. docs/repository-structure.md
+# 4. docs/development-guidelines.md
+```
 
-同様に`bff`と`backend`にも作成します。
+**BFF サブモジュール (services/bff/):**
+```bash
+cd services/bff
+# 同様にCLAUDE.md + docs/ 3ファイルを作成
+```
 
-**重要：** 各サービスのCLAUDE.mdはルートのCLAUDE.mdを継承する形で記述
+**Backend サブモジュール (services/backend/):**
+```bash
+cd services/backend
+# 同様にCLAUDE.md + docs/ 3ファイルを作成
+```
+
+**重要:**
+- 各サービスのCLAUDE.mdはルートのCLAUDE.mdを継承する形で記述
+- 各サブモジュールで個別にコミット・プッシュが必要
+- サブモジュール内の変更は、親リポジトリでサブモジュール参照を更新する必要がある
 
 #### 4. 初回実装用のステアリングファイル作成
 

@@ -47,9 +47,16 @@ CLAUDE.mdの手順に沿って、順次実行してください。
 **状況:** ✅ 完了
 
 ```bash
+# 親リポジトリで実行
 mkdir -p docs .steering contracts/openapi contracts/proto contracts/types
-mkdir -p services/{frontend,bff,backend}/{docs,.steering}
+mkdir -p e2e/tests/{auth,merchants,contracts}
 ```
+
+**注意:** このプロジェクトはサブモジュール構成です。
+`services/`配下は独立したGitリポジトリ（サブモジュール）として管理されています。
+- Frontend: https://github.com/ikechin/agent-teams-frontend
+- BFF: https://github.com/ikechin/agent-teams-bff
+- Backend: https://github.com/ikechin/agent-teams-backend
 
 ---
 

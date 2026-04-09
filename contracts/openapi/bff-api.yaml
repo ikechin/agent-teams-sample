@@ -143,8 +143,7 @@ paths:
         - Merchants
       summary: List merchants
       description: |
-        Returns a list of merchants. In the initial implementation (Frontend→BFF only),
-        this endpoint returns mock data without calling the Backend service.
+        Returns a list of merchants from the Backend gRPC service.
       operationId: listMerchants
       security:
         - sessionAuth: []
@@ -191,6 +190,125 @@ paths:
                 $ref: '#/components/schemas/Error'
         '403':
           description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - Merchants
+      summary: Create a new merchant
+      description: Creates a new merchant via the Backend gRPC service.
+      operationId: createMerchant
+      security:
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - address
+                - contact_person
+                - phone
+              properties:
+                name:
+                  type: string
+                  maxLength: 200
+                  example: "新規加盟店"
+                address:
+                  type: string
+                  example: "東京都港区六本木3-3-3"
+                contact_person:
+                  type: string
+                  maxLength: 100
+                  example: "田中一郎"
+                phone:
+                  type: string
+                  maxLength: 20
+                  example: "03-3456-7890"
+                email:
+                  type: string
+                  format: email
+                  example: "tanaka@example.com"
+      responses:
+        '201':
+          description: Merchant created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  merchant:
+                    $ref: '#/components/schemas/Merchant'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Merchant already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/merchants/{id}:
+    get:
+      tags:
+        - Merchants
+      summary: Get merchant by ID
+      description: Returns a single merchant by UUID.
+      operationId: getMerchant
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Merchant UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Merchant details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  merchant:
+                    $ref: '#/components/schemas/Merchant'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Merchant not found
           content:
             application/json:
               schema:
@@ -271,6 +389,15 @@ components:
           type: string
           example: "山田太郎"
           description: Contact person name
+        email:
+          type: string
+          format: email
+          example: "yamada@example.com"
+          description: Merchant email address
+        is_active:
+          type: boolean
+          example: true
+          description: Whether the merchant is active
         created_at:
           type: string
           format: date-time

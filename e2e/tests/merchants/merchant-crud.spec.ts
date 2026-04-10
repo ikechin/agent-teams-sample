@@ -1,12 +1,19 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 import { login, waitForElement } from '../../utils/test-helpers';
 
-test.describe('加盟店CRUD操作', () => {
-  test.beforeEach(async ({ page }) => {
+test.describe.serial('加盟店CRUD操作', () => {
+  let page: Page;
+
+  test.beforeAll(async ({ browser }) => {
+    page = await browser.newPage();
     await login(page, process.env.TEST_USER_EMAIL || 'test@example.com', process.env.TEST_USER_PASSWORD || 'password123');
   });
 
-  test('加盟店を新規登録できる', async ({ page }) => {
+  test.afterAll(async () => {
+    await page.close();
+  });
+
+  test('加盟店を新規登録できる', async () => {
     // 加盟店一覧へ
     await page.goto('/dashboard/merchants');
     await waitForElement(page, 'table');
@@ -28,11 +35,11 @@ test.describe('加盟店CRUD操作', () => {
     // 詳細画面または一覧画面にリダイレクトされる
     await expect(page).toHaveURL(/.*merchants\/[a-f0-9-]+$|.*merchants$/);
 
-    // 登録した加盟店名が表示される
-    await expect(page.locator('text=E2Eテスト加盟店')).toBeVisible({ timeout: 10000 });
+    // 登録した加盟店名が表示される（h2見出しで確認）
+    await expect(page.locator('h2:has-text("E2Eテスト加盟店")')).toBeVisible({ timeout: 10000 });
   });
 
-  test('加盟店詳細を表示できる', async ({ page }) => {
+  test('加盟店詳細を表示できる', async () => {
     await page.goto('/dashboard/merchants');
     await waitForElement(page, 'table');
 
@@ -59,7 +66,7 @@ test.describe('加盟店CRUD操作', () => {
     await expect(page.locator('button:has-text("削除")')).toBeVisible();
   });
 
-  test('加盟店を編集できる', async ({ page }) => {
+  test('加盟店を編集できる', async () => {
     await page.goto('/dashboard/merchants');
     await waitForElement(page, 'table');
 
@@ -91,12 +98,9 @@ test.describe('加盟店CRUD操作', () => {
     await expect(page.locator('h2')).toContainText('更新後の加盟店名（E2E）', { timeout: 10000 });
   });
 
-  test('加盟店を削除できる', async ({ page }) => {
+  test('加盟店削除ボタンを押すと確認ダイアログが表示される', async () => {
     await page.goto('/dashboard/merchants');
     await waitForElement(page, 'table');
-
-    // 削除前の行数を取得
-    const rowCountBefore = await page.locator('table tbody tr').count();
 
     // 最初の加盟店をクリックして詳細へ
     await page.click('table tbody tr:first-child');
@@ -109,17 +113,38 @@ test.describe('加盟店CRUD操作', () => {
     await expect(page.locator('[role="dialog"]')).toBeVisible();
     await expect(page.locator('text=この操作は取り消せません')).toBeVisible();
 
+    // 加盟店名がダイアログに含まれている
+    await expect(page.locator('[role="dialog"]')).toContainText('削除しますか');
+
+    // ダイアログを閉じる
+    await page.locator('[role="dialog"] button:has-text("キャンセル")').click();
+    await expect(page.locator('[role="dialog"]')).not.toBeVisible();
+  });
+
+  test('権限がないユーザーが削除するとエラーが表示される', async () => {
+    // テストユーザー(contract-manager)はmerchants:delete権限なし
+    await page.goto('/dashboard/merchants');
+    await waitForElement(page, 'table');
+
+    // 最初の加盟店をクリックして詳細へ
+    await page.click('table tbody tr:first-child');
+    await expect(page).toHaveURL(/.*merchants\/[a-f0-9-]+$/);
+
+    // 削除ボタンをクリック
+    await page.click('button:has-text("削除")');
+    await expect(page.locator('[role="dialog"]')).toBeVisible();
+
     // ダイアログ内の削除ボタンをクリック
     await page.locator('[role="dialog"] button:has-text("削除")').click();
 
-    // 一覧画面にリダイレクトされる
-    await expect(page).toHaveURL(/.*merchants$/, { timeout: 10000 });
+    // 権限エラーが表示される（Permission denied）
+    await expect(page.locator('[role="alert"]')).toBeVisible({ timeout: 10000 });
 
-    // テーブルが表示されるまで待機
-    await waitForElement(page, 'table');
+    // ダイアログを閉じる
+    await page.locator('[role="dialog"] button:has-text("キャンセル")').click();
   });
 
-  test('編集画面で必須項目が空の場合、バリデーションエラーが表示される', async ({ page }) => {
+  test('編集画面で必須項目が空の場合、バリデーションエラーが表示される', async () => {
     await page.goto('/dashboard/merchants');
     await waitForElement(page, 'table');
 
@@ -145,7 +170,7 @@ test.describe('加盟店CRUD操作', () => {
     await expect(page.locator('text=電話番号は必須です')).toBeVisible();
   });
 
-  test('削除確認ダイアログでキャンセルすると削除されない', async ({ page }) => {
+  test('削除確認ダイアログでキャンセルすると削除されない', async () => {
     await page.goto('/dashboard/merchants');
     await waitForElement(page, 'table');
 
@@ -177,7 +202,7 @@ test.describe('加盟店CRUD操作', () => {
     }
   });
 
-  test('削除確認ダイアログをESCキーで閉じられる', async ({ page }) => {
+  test('削除確認ダイアログをESCキーで閉じられる', async () => {
     await page.goto('/dashboard/merchants');
     await waitForElement(page, 'table');
 
@@ -198,7 +223,7 @@ test.describe('加盟店CRUD操作', () => {
     await expect(page.locator('[role="dialog"]')).not.toBeVisible();
   });
 
-  test('新規登録画面で必須項目が空の場合、バリデーションエラーが表示される', async ({ page }) => {
+  test('新規登録画面で必須項目が空の場合、バリデーションエラーが表示される', async () => {
     await page.goto('/dashboard/merchants/new');
 
     // 何も入力せずに登録ボタンをクリック

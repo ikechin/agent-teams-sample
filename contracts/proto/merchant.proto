@@ -8,6 +8,8 @@ service MerchantService {
   rpc ListMerchants(ListMerchantsRequest) returns (ListMerchantsResponse);
   rpc GetMerchant(GetMerchantRequest) returns (MerchantResponse);
   rpc CreateMerchant(CreateMerchantRequest) returns (MerchantResponse);
+  rpc UpdateMerchant(UpdateMerchantRequest) returns (MerchantResponse);
+  rpc DeleteMerchant(DeleteMerchantRequest) returns (DeleteMerchantResponse);
 }
 
 message Merchant {
@@ -53,6 +55,23 @@ message CreateMerchantRequest {
   string email = 5;
   string created_by = 6; // user_id from BFF (for audit)
 }
+
+message UpdateMerchantRequest {
+  string merchant_id = 1;
+  string name = 2;
+  string address = 3;
+  string contact_person = 4;
+  string phone = 5;
+  string email = 6;
+  string updated_by = 7; // user_id from BFF (for audit)
+}
+
+message DeleteMerchantRequest {
+  string merchant_id = 1;
+  string deleted_by = 2; // user_id from BFF (for audit)
+}
+
+message DeleteMerchantResponse {}
 
 message MerchantResponse {
   Merchant merchant = 1;

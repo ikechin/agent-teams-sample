@@ -1,0 +1,137 @@
+# 統合Docker Compose - 全サービス一括起動
+#
+# 使い方:
+#   docker compose up -d          # 全サービス起動
+#   docker compose up -d --build  # リビルドして起動
+#   docker compose down           # 全サービス停止
+#   docker compose down -v        # 停止 + データ削除
+#   docker compose logs -f        # ログ確認
+#
+# ポート一覧:
+#   Frontend:   http://localhost:3000
+#   BFF API:    http://localhost:8080
+#   Backend:    localhost:50051 (gRPC)
+#   BFF DB:     localhost:5432
+#   Backend DB: localhost:5433
+
+services:
+  # ============================================================
+  # Backend Service
+  # ============================================================
+  backend-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: backend_db
+      POSTGRES_USER: backend_user
+      POSTGRES_PASSWORD: backend_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - backend-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U backend_user -d backend_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend-flyway:
+    image: flyway/flyway:10
+    command: migrate
+    volumes:
+      - ./services/backend/db/migrations:/flyway/sql
+    environment:
+      FLYWAY_URL: jdbc:postgresql://backend-db:5432/backend_db
+      FLYWAY_USER: backend_user
+      FLYWAY_PASSWORD: backend_password
+    depends_on:
+      backend-db:
+        condition: service_healthy
+
+  backend:
+    build:
+      context: ./services/backend
+    ports:
+      - "50051:50051"
+    environment:
+      PORT: "50051"
+      DATABASE_URL: postgres://backend_user:backend_password@backend-db:5432/backend_db?sslmode=disable
+      LOG_LEVEL: debug
+    depends_on:
+      backend-db:
+        condition: service_healthy
+      backend-flyway:
+        condition: service_completed_successfully
+
+  # ============================================================
+  # BFF Service
+  # ============================================================
+  bff-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: bff_db
+      POSTGRES_USER: bff_user
+      POSTGRES_PASSWORD: bff_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - bff-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bff_user -d bff_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  bff-flyway:
+    image: flyway/flyway:10
+    command: migrate
+    volumes:
+      - ./services/bff/db/migrations:/flyway/sql
+    environment:
+      FLYWAY_URL: jdbc:postgresql://bff-db:5432/bff_db
+      FLYWAY_USER: bff_user
+      FLYWAY_PASSWORD: bff_password
+      FLYWAY_BASELINE_ON_MIGRATE: "true"
+    depends_on:
+      bff-db:
+        condition: service_healthy
+
+  bff:
+    build:
+      context: ./services/bff
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: "8080"
+      ENVIRONMENT: development
+      DATABASE_URL: postgres://bff_user:bff_password@bff-db:5432/bff_db?sslmode=disable
+      SESSION_SECRET: dev-secret-key
+      SESSION_EXPIRY: "86400"
+      LOG_LEVEL: debug
+      BACKEND_GRPC_ADDR: "backend:50051"
+    depends_on:
+      bff-db:
+        condition: service_healthy
+      bff-flyway:
+        condition: service_completed_successfully
+      backend:
+        condition: service_started
+
+  # ============================================================
+  # Frontend Service
+  # ============================================================
+  frontend:
+    build:
+      context: ./services/frontend
+      args:
+        NEXT_PUBLIC_BFF_API_URL: http://localhost:8080
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+    depends_on:
+      bff:
+        condition: service_started
+
+volumes:
+  backend-db-data:
+  bff-db-data:

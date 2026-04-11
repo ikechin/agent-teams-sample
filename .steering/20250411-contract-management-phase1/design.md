@@ -282,6 +282,51 @@ INSERT INTO services (service_code, name, description) VALUES
 | `cmd/server/main.go` | 新gRPCサービス登録 |
 | テスト | contract_service_test.go, contract_server_test.go |
 
+### 監査記録（contract_changes）の記録方式
+
+**重要:** `contract_changes` テーブルは汎用設計（`resource_type` + `resource_id`）で実装済み。
+CLAUDE.md に記載の `contract_id` カラムは設計ドキュメント上のものであり、実際のスキーマとは異なる。
+
+既存の加盟店管理と同じパターンに従う：
+
+```go
+// サービス管理の監査記録
+auditRecord := &model.ContractChange{
+    ResourceType: "service",          // "service" を使用
+    ResourceID:   serviceID,          // service_id
+    ChangeType:   "CREATE",           // CREATE / UPDATE
+    FieldName:    "",
+    OldValue:     "",
+    NewValue:     service.Name,
+    ChangedBy:    changedBy,
+}
+
+// 契約管理の監査記録
+auditRecord := &model.ContractChange{
+    ResourceType: "contract",         // "contract" を使用
+    ResourceID:   contractID,         // contract_id
+    ChangeType:   "CREATE",           // CREATE / UPDATE / DELETE
+    FieldName:    "status",
+    OldValue:     "DRAFT",
+    NewValue:     "ACTIVE",
+    ChangedBy:    changedBy,
+}
+```
+
+### 金額（Decimal型）の取り扱い
+
+Proto定義では `monthly_fee` / `initial_fee` を `string` 型で定義（浮動小数点の精度問題回避）。
+
+**Backend（Go）:**
+- DB: `DECIMAL(10,2)` → Go: `string` で受け取り（sqlcの `pgtype.Numeric` または `string`）
+- gRPC: `string` のまま送受信
+- バリデーション: `strconv.ParseFloat` で数値チェック、負の値を拒否
+
+**Frontend（TypeScript）:**
+- API: `string` で受信
+- 表示: `Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY' })` でフォーマット
+- 入力: `<Input type="number" step="0.01">` で受け付け、送信時に `string` に変換
+
 ### ステータス遷移ルール
 
 ```go

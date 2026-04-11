@@ -167,7 +167,8 @@ cd services/backend && git checkout -b feature/1-impl && cd ../..
 ### ポイント
 
 - **Orchestratorは常にフォアグラウンドでユーザー応答可能な状態を維持する**
-- 各AgentはAgent Teamsの場合 `run_in_background: true` でバックグラウンド起動する
+- 各AgentはAgent Teams機能（`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`）で起動し、`SendMessage` による相互通信が可能な状態にする
+- Agent間の直接通信（実装詳細の確認等）と、Orchestrator経由の通信（設計方針変更等）を使い分ける（詳細は [CLAUDE.md - Agent間通信方針](../CLAUDE.md) を参照）
 - ユーザーから進捗を聞かれた場合、各Agentの状態（実行中/完了/失敗）を即座に報告する
 
 ---

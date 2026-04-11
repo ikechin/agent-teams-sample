@@ -73,9 +73,10 @@ git submodule update --init --recursive
 **Agent Teamsを使用する際は、以下のルールを必ず遵守すること：**
 
 1. **Orchestrator（リーダーAgent）は常にユーザー応答可能な状態を維持する**
-   - 各AgentはAgent Teamsの場合 `run_in_background: true` で**バックグラウンド起動**する
+   - 各AgentはAgent Teams機能で起動し、`SendMessage`による相互通信が可能な状態にする
    - Orchestratorはフォアグラウンドで待機し、ユーザーの質問にいつでも応答できるようにする
    - Agent完了時に自動通知を受け取り、統合確認を進める
+   - Agent間の通信ルールは「Agent間通信方針（ハイブリッド型）」セクションに従う
 
 2. **ユーザーへの進捗報告**
    - ユーザーから進捗を聞かれた場合、各Agentの状態（実行中/完了/失敗）を報告する

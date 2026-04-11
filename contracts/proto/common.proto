@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package common;
+
+option go_package = "github.com/ikechin/agent-teams-backend/internal/pb";
+
+message Pagination {
+  int32 current_page = 1;
+  int32 total_pages = 2;
+  int32 total_items = 3;
+  int32 items_per_page = 4;
+}

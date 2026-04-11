@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package service_mgmt;
 
+import "common.proto";
+
 option go_package = "github.com/ikechin/agent-teams-backend/internal/pb";
 
 service ServiceMgmtService {
@@ -29,14 +31,7 @@ message ListServicesRequest {
 
 message ListServicesResponse {
   repeated ServiceItem services = 1;
-  Pagination pagination = 2;
-}
-
-message Pagination {
-  int32 current_page = 1;
-  int32 total_pages = 2;
-  int32 total_items = 3;
-  int32 items_per_page = 4;
+  common.Pagination pagination = 2;
 }
 
 message GetServiceRequest {

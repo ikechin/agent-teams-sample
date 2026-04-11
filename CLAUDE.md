@@ -85,6 +85,83 @@ git submodule update --init --recursive
    - featureブランチの作成
    - タスク管理（TaskCreate/TaskUpdate）による進捗追跡
 
+#### Agent間通信方針（ハイブリッド型）
+
+**基本構成: Orchestrator中継 + 許可された直接通信**
+
+```
+Backend Agent ←→ Orchestrator ←→ BFF Agent
+                     ↕
+              Frontend Agent
+              
+※ Orchestratorが許可した範囲でAgent間直接通信（SendMessage）も可能
+```
+
+**通信ルール:**
+
+1. **Orchestrator経由が必須のケース（方針・設計に関わるもの）**
+   - 設計方針の変更・提案（例: エラーコード体系の変更）
+   - API契約の変更（Proto/OpenAPIの修正）
+   - 共通課題の解決方針（例: 型の共有方法、共通ライブラリの追加）
+   - 他Agentの担当範囲に影響する変更
+
+2. **Agent間直接通信OKのケース（事実確認・実装詳細）**
+   - 実装済みのメソッド名・型名・フィールド名の確認
+   - gRPCレスポンスの構造確認
+   - 既存コードのパターン確認（「この関数どう使ってる？」）
+   - テストデータの確認
+
+3. **直接通信時のルール**
+   - 設計変更が必要と判明した場合は、即座にOrchestratorに報告する
+   - 直接通信で決めた内容をOrchestratorに事後報告する（状況把握のため）
+   - 矛盾する指示を受けた場合はOrchestratorに確認する
+
+**Orchestratorが各Agentに伝える起動時指示の例:**
+```
+「BFF AgentはBackend Agentに実装詳細（メソッド名、型名等）を
+ 直接確認してOK。ただし設計変更が必要な場合は私（Orchestrator）に
+ 報告すること。」
+```
+
+#### 依存関係に応じたフェーズ分け実行
+
+**全Agentを常に同時起動するのではなく、依存関係に応じて段階的に起動する。**
+
+**パターン1: API契約が確定済み → 全Agent並行起動**
+```
+Phase 1: Orchestrator事前作業（Proto/OpenAPI確定）
+Phase 2: Backend + BFF + Frontend 並行起動
+Phase 3: E2E Test Agent（全Agent完了後）
+```
+
+**パターン2: Backend実装に依存する場合 → 段階的起動**
+```
+Phase 1: Backend Agent（DB + gRPC実装）
+Phase 2: BFF Agent（Backend完了後）+ Frontend Agent（OpenAPI型確定後）
+Phase 3: E2E Test Agent
+```
+
+**パターン3: 単一サービス内の変更 → 単一Agent**
+```
+サービス内完結の変更はAgent Teamsを使わず、単一Agentで実装する。
+（コスト最適化）
+```
+
+**判断基準:**
+- API契約が事前確定できる → パターン1（並行）
+- 新しいgRPC/RESTの設計が必要 → パターン2（段階的）
+- 影響が1サービス内 → パターン3（単一Agent）
+
+#### レビュー・修正フェーズのAgent活用
+
+**実装完了後のレビュー・修正もAgentに委任できる。**
+
+1. **レビュー**: 各サービスのレビューAgentを並行起動し、差分ベースでチェック
+2. **修正**: レビュー指摘をサービス別の修正Agentに並行で委任
+3. **E2Eテスト**: 統合動作確認後にE2E Agent起動
+
+**注意:** レビュー・修正Agentは実装Agentとは別に起動する（コンテキストが汚染されないため）
+
 #### 実装フェーズでのAgent Teams活用
 
 **前提条件：**
@@ -120,10 +197,12 @@ Task 3 (Backend Agent):
 ```
 
 **Agent間の調整メカニズム：**
-- **API契約**: BFF Agentが`contracts/openapi/`にOpenAPI仕様を配置
+- **API契約**: Orchestratorが事前に`contracts/proto/`と`contracts/openapi/`を確定してから各Agentを起動
+- **共通課題**: 複数Agentに影響する課題（型共有、共通ライブラリ等）はOrchestratorが方針決定し全Agentに指示
 - **型定義**: 共通型は`contracts/types/`に配置
-- **進捗確認**: Orchestratorが定期的に各Agentの進捗を統合確認
-- **依存関係**: API契約確定後、Frontend/Backendが並行実装開始
+- **進捗確認**: Orchestratorが`TaskList`で全体進捗を把握。各Agentは`TaskUpdate`で進捗報告
+- **依存関係**: 「Agent間通信方針」と「フェーズ分け実行」に従い、依存関係に応じた起動順序を決定
+- **直接通信**: 実装詳細の確認はAgent間`SendMessage`で直接やり取りOK（方針変更はOrchestrator経由）
 
 #### Agent別の責務
 

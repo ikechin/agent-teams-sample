@@ -19,6 +19,10 @@ tags:
     description: User authentication operations
   - name: Merchants
     description: Merchant management operations
+  - name: Services
+    description: Service management operations
+  - name: Contracts
+    description: Contract management operations
 
 paths:
   /api/v1/auth/login:
@@ -432,6 +436,539 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /api/v1/services:
+    get:
+      tags:
+        - Services
+      summary: List services
+      description: Returns a list of services from the Backend gRPC service.
+      operationId: listServices
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: Page number (1-indexed)
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Number of items per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: search
+          in: query
+          description: Search query (service code or name)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of services
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  services:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Service'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - Services
+      summary: Create a new service
+      description: Creates a new service via the Backend gRPC service.
+      operationId: createService
+      security:
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  maxLength: 255
+                  example: "決済サービス"
+                description:
+                  type: string
+                  example: "加盟店向けクレジットカード・電子マネー決済サービス"
+      responses:
+        '201':
+          description: Service created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  service:
+                    $ref: '#/components/schemas/Service'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/services/{id}:
+    get:
+      tags:
+        - Services
+      summary: Get service by ID
+      description: Returns a single service by UUID.
+      operationId: getService
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Service UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Service details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  service:
+                    $ref: '#/components/schemas/Service'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Service not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags:
+        - Services
+      summary: Update service
+      description: Updates an existing service's information.
+      operationId: updateService
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Service UUID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  maxLength: 255
+                  example: "更新サービス"
+                description:
+                  type: string
+                  example: "更新されたサービス説明"
+                is_active:
+                  type: boolean
+                  example: true
+      responses:
+        '200':
+          description: Service updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  service:
+                    $ref: '#/components/schemas/Service'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Service not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/contracts:
+    get:
+      tags:
+        - Contracts
+      summary: List contracts
+      description: Returns a list of contracts with optional filters.
+      operationId: listContracts
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: Page number (1-indexed)
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Number of items per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: search
+          in: query
+          description: Search query (contract number or merchant name)
+          schema:
+            type: string
+        - name: status
+          in: query
+          description: Filter by contract status
+          schema:
+            type: string
+            enum:
+              - DRAFT
+              - ACTIVE
+              - SUSPENDED
+              - TERMINATED
+        - name: merchant_id
+          in: query
+          description: Filter by merchant UUID
+          schema:
+            type: string
+            format: uuid
+        - name: service_id
+          in: query
+          description: Filter by service UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of contracts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  contracts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Contract'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - Contracts
+      summary: Create a new contract
+      description: Creates a new contract with DRAFT status.
+      operationId: createContract
+      security:
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - merchant_id
+                - service_id
+                - start_date
+              properties:
+                merchant_id:
+                  type: string
+                  format: uuid
+                  example: "550e8400-e29b-41d4-a716-446655440000"
+                service_id:
+                  type: string
+                  format: uuid
+                  example: "660e8400-e29b-41d4-a716-446655440000"
+                start_date:
+                  type: string
+                  format: date
+                  example: "2026-05-01"
+                end_date:
+                  type: string
+                  format: date
+                  example: "2027-04-30"
+                monthly_fee:
+                  type: string
+                  example: "50000.00"
+                  description: Monthly fee as decimal string
+                initial_fee:
+                  type: string
+                  example: "100000.00"
+                  description: Initial fee as decimal string
+      responses:
+        '201':
+          description: Contract created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  contract:
+                    $ref: '#/components/schemas/Contract'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/contracts/{id}:
+    get:
+      tags:
+        - Contracts
+      summary: Get contract by ID
+      description: Returns a single contract by UUID with merchant and service details.
+      operationId: getContract
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Contract UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Contract details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  contract:
+                    $ref: '#/components/schemas/Contract'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Contract not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags:
+        - Contracts
+      summary: Update contract
+      description: Updates an existing contract. Supports status transitions.
+      operationId: updateContract
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Contract UUID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum:
+                    - DRAFT
+                    - ACTIVE
+                    - SUSPENDED
+                    - TERMINATED
+                start_date:
+                  type: string
+                  format: date
+                end_date:
+                  type: string
+                  format: date
+                monthly_fee:
+                  type: string
+                  description: Monthly fee as decimal string
+                initial_fee:
+                  type: string
+                  description: Initial fee as decimal string
+      responses:
+        '200':
+          description: Contract updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  contract:
+                    $ref: '#/components/schemas/Contract'
+        '400':
+          description: Validation error or invalid status transition
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Contract not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - Contracts
+      summary: Terminate contract
+      description: Terminates a contract by setting status to TERMINATED.
+      operationId: deleteContract
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Contract UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Contract terminated
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Contract not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
 components:
   securitySchemes:
     sessionAuth:
@@ -516,6 +1053,115 @@ components:
           type: boolean
           example: true
           description: Whether the merchant is active
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+
+    Service:
+      type: object
+      required:
+        - service_id
+        - service_code
+        - name
+        - is_active
+        - created_at
+        - updated_at
+      properties:
+        service_id:
+          type: string
+          format: uuid
+          example: "660e8400-e29b-41d4-a716-446655440000"
+        service_code:
+          type: string
+          example: "SVC-00001"
+          description: Unique service code
+        name:
+          type: string
+          example: "決済サービス"
+        description:
+          type: string
+          example: "加盟店向けクレジットカード・電子マネー決済サービス"
+        is_active:
+          type: boolean
+          example: true
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+
+    Contract:
+      type: object
+      required:
+        - contract_id
+        - contract_number
+        - merchant_id
+        - service_id
+        - status
+        - start_date
+        - created_at
+        - updated_at
+      properties:
+        contract_id:
+          type: string
+          format: uuid
+          example: "770e8400-e29b-41d4-a716-446655440000"
+        contract_number:
+          type: string
+          example: "C-00001"
+          description: Unique contract number
+        merchant_id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        merchant_name:
+          type: string
+          example: "テスト加盟店1"
+          description: Merchant name (joined)
+        service_id:
+          type: string
+          format: uuid
+          example: "660e8400-e29b-41d4-a716-446655440000"
+        service_name:
+          type: string
+          example: "決済サービス"
+          description: Service name (joined)
+        status:
+          type: string
+          enum:
+            - DRAFT
+            - ACTIVE
+            - SUSPENDED
+            - TERMINATED
+          example: "DRAFT"
+        contract_date:
+          type: string
+          format: date
+          example: "2026-04-11"
+        start_date:
+          type: string
+          format: date
+          example: "2026-05-01"
+        end_date:
+          type: string
+          format: date
+          example: "2027-04-30"
+        monthly_fee:
+          type: string
+          example: "50000.00"
+          description: Monthly fee as decimal string
+        initial_fee:
+          type: string
+          example: "100000.00"
+          description: Initial fee as decimal string
         created_at:
           type: string
           format: date-time

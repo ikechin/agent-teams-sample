@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+package contract;
+
+import "common.proto";
+
+option go_package = "github.com/ikechin/agent-teams-backend/internal/pb";
+
+service ContractService {
+  rpc ListContracts(ListContractsRequest) returns (ListContractsResponse);
+  rpc GetContract(GetContractRequest) returns (ContractResponse);
+  rpc CreateContract(CreateContractRequest) returns (ContractResponse);
+  rpc UpdateContract(UpdateContractRequest) returns (ContractResponse);
+  rpc DeleteContract(DeleteContractRequest) returns (DeleteContractResponse);
+}
+
+message ContractItem {
+  string contract_id = 1;
+  string contract_number = 2;
+  string merchant_id = 3;
+  string merchant_name = 4;
+  string service_id = 5;
+  string service_name = 6;
+  string status = 7;
+  string contract_date = 8;
+  string start_date = 9;
+  string end_date = 10;
+  string monthly_fee = 11;
+  string initial_fee = 12;
+  string created_at = 13;
+  string updated_at = 14;
+}
+
+message ListContractsRequest {
+  int32 page = 1;
+  int32 limit = 2;
+  string search = 3;
+  string status = 4;
+  string merchant_id = 5;
+  string service_id = 6;
+}
+
+message ListContractsResponse {
+  repeated ContractItem contracts = 1;
+  common.Pagination pagination = 2;
+}
+
+message GetContractRequest {
+  string contract_id = 1;
+}
+
+message CreateContractRequest {
+  string merchant_id = 1;
+  string service_id = 2;
+  string start_date = 3;
+  string end_date = 4;
+  string monthly_fee = 5;
+  string initial_fee = 6;
+  string created_by = 7;
+}
+
+message UpdateContractRequest {
+  string contract_id = 1;
+  string status = 2;
+  string start_date = 3;
+  string end_date = 4;
+  string monthly_fee = 5;
+  string initial_fee = 6;
+  string updated_by = 7;
+}
+
+message DeleteContractRequest {
+  string contract_id = 1;
+  string deleted_by = 2;
+}
+
+message DeleteContractResponse {}
+
+message ContractResponse {
+  ContractItem contract = 1;
+}

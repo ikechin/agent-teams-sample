@@ -67,6 +67,24 @@ git submodule update --init --recursive
 - ❌ **ドキュメント作成フェーズ**: 通常のClaude Code（単一Agent）で順次作成
 - ✅ **実装フェーズ**: Claude Code Agent Teams機能で並行実装
 
+#### Orchestratorの運用ルール（必須）
+
+**Agent Teamsを使用する際は、以下のルールを必ず遵守すること：**
+
+1. **Orchestrator（リーダーAgent）は常にユーザー応答可能な状態を維持する**
+   - 各AgentはAgent Teamsの場合 `run_in_background: true` で**バックグラウンド起動**する
+   - Orchestratorはフォアグラウンドで待機し、ユーザーの質問にいつでも応答できるようにする
+   - Agent完了時に自動通知を受け取り、統合確認を進める
+
+2. **ユーザーへの進捗報告**
+   - ユーザーから進捗を聞かれた場合、各Agentの状態（実行中/完了/失敗）を報告する
+   - 開発途中でもユーザーの質問に回答する（Agentの完了を待たない）
+
+3. **Orchestratorの事前作業**
+   - API契約（Proto/OpenAPI）の確定
+   - featureブランチの作成
+   - タスク管理（TaskCreate/TaskUpdate）による進捗追跡
+
 #### 実装フェーズでのAgent Teams活用
 
 **前提条件：**

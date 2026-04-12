@@ -666,6 +666,19 @@ Microsoftが開発したブラウザ自動化テストフレームワーク
 | テストシナリオ | Test Scenario | `testScenario` |
 | クリティカルパス | Critical Path | `criticalPath` |
 
+### 承認ワークフロー関連（Phase 2）
+
+| 日本語 | 英語 | コード上の命名 | 定義 |
+|-------|------|-------------|------|
+| 申請者 | Requester | `requester`, `requester_id` | 契約変更を申請したユーザー |
+| 承認者 | Approver | `approver`, `approver_id` | 変更内容を承認/却下するユーザー |
+| 承認待ち | Pending | `PENDING` | 承認ワークフローが開始され結果待ちの状態 |
+| 承認済み | Approved | `APPROVED` | 承認ワークフローが承認された状態 |
+| 却下 | Rejected | `REJECTED` | 承認ワークフローが却下された状態 |
+| 却下理由 | Rejection Reason | `rejection_reason` | 却下時に必須で入力する理由（最小10文字） |
+
+職務分掌の運用上の注意: `requester_id != approver_id` をDB制約・アプリケーション制約の両方で強制する。
+
 ---
 
 ## 用語の追加・変更プロセス

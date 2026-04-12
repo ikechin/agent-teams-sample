@@ -76,7 +76,7 @@ git submodule update --init --recursive
    - 各AgentはAgent Teams機能で起動し、`SendMessage`による相互通信が可能な状態にする
    - Orchestratorはフォアグラウンドで待機し、ユーザーの質問にいつでも応答できるようにする
    - Agent完了時に自動通知を受け取り、統合確認を進める
-   - Agent間の通信ルールは「Agent間通信方針（ハイブリッド型）」セクションに従う
+   - Agent間の通信ルールは「Agent間通信方針（フルメッシュ型）」セクションに従う
 
 2. **ユーザーへの進捗報告**
    - ユーザーから進捗を聞かれた場合、各Agentの状態（実行中/完了/失敗）を報告する
@@ -87,43 +87,80 @@ git submodule update --init --recursive
    - featureブランチの作成
    - タスク管理（TaskCreate/TaskUpdate）による進捗追跡
 
-#### Agent間通信方針（ハイブリッド型）
+#### Agent間通信方針（フルメッシュ型）
 
-**基本構成: Orchestrator中継 + 許可された直接通信**
+**基本構成: 全 Agent が SendMessage で相互直接通信**
 
 ```
-Backend Agent ←→ Orchestrator ←→ BFF Agent
-                     ↕
-              Frontend Agent
-              
-※ Orchestratorが許可した範囲でAgent間直接通信（SendMessage）も可能
+        Backend Agent
+         ↕    ↕
+BFF Agent ←→ Frontend Agent
+         ↕    ↕
+        E2E Test Agent
+              ↕
+        Orchestrator (全 Agent と双方向)
 ```
+
+すべての Agent が他のすべての Agent と `SendMessage` で直接やり取りできる構成。
+Orchestrator は方針判断と最終承認に専念し、実装の細部は Agent 間で直接同期する。
+
+**この方針を採用する理由:**
+Phase 2 (`.steering/20260412-contract-management-phase2/retrospective.md`) で、
+ハイブリッド型は「実装の暗黙前提」を共有する経路がなく、Backend が
+`WHERE status='PENDING'` でハードコードした事実が Frontend に伝わらず、
+H1（却下理由が永久に表示されない仕様バグ）として顕在化した。
+フルメッシュ型はこの種の認識齟齬を実装中に検知することを狙う。
 
 **通信ルール:**
 
-1. **Orchestrator経由が必須のケース（方針・設計に関わるもの）**
-   - 設計方針の変更・提案（例: エラーコード体系の変更）
-   - API契約の変更（Proto/OpenAPIの修正）
-   - 共通課題の解決方針（例: 型の共有方法、共通ライブラリの追加）
-   - 他Agentの担当範囲に影響する変更
+1. **Orchestrator 経由が必須のケース（方針・最終決定）**
+   - 設計方針の変更・新規方針の決定（例: エラーコード体系の変更、新しい認証方式）
+   - API契約の変更（Proto/OpenAPI を物理ファイルとして修正する場合）
+   - 複数 Agent にまたがる横断的課題で方向性を決めかねるとき
+   - スコープ外の追加要求
 
-2. **Agent間直接通信OKのケース（事実確認・実装詳細）**
+2. **Agent 間直接通信が必須のケース（実装の暗黙前提の共有）**
+   各 Agent は以下を発見した時点で、関係する全 Agent に **SendMessage で即座に発信** する義務を負う:
+   - **クエリ・条件式のハードコード**（`WHERE status='PENDING'` のような暗黙の絞り込み）
+   - **レスポンス形状の選択**（フィールド命名、optional/required、null 表現）
+   - **エラー区分の追加・変更**（新しいエラーコード、HTTPステータス、構造化エラー Reason）
+   - **バリデーションの境界値**（min/max、形式、空文字の扱い）
+   - **権限・認可の判定基準**（必要パーミッション、SoD除外ルール）
+   - **横断的制約の発見**（rate limit、セッション、middleware の挙動）
+
+3. **Agent 間直接通信OKのケース（事実確認）**
    - 実装済みのメソッド名・型名・フィールド名の確認
    - gRPCレスポンスの構造確認
-   - 既存コードのパターン確認（「この関数どう使ってる？」）
+   - 既存コードのパターン確認
    - テストデータの確認
 
-3. **直接通信時のルール**
-   - 設計変更が必要と判明した場合は、即座にOrchestratorに報告する
-   - 直接通信で決めた内容をOrchestratorに事後報告する（状況把握のため）
-   - 矛盾する指示を受けた場合はOrchestratorに確認する
+4. **発信ルール**
+   - **設計判断ログ**: 「他 Agent の前提に影響しうる決定」をしたら、コミット前に該当 Agent 全員へ要約を送る (1〜3行で簡潔に)
+   - **CC ルール**: 2 Agent 間の決定でも、関連しそうな第3の Agent には情報共有のため CC する
+   - **設計変更が必要と判明した場合**は、Agent 間で勝手に決めず即座に Orchestrator に上げる
+   - **矛盾する指示を受けた場合**は Orchestrator に確認する
 
-**Orchestratorが各Agentに伝える起動時指示の例:**
+**Orchestratorが各Agent起動時に伝える指示の例:**
 ```
-「BFF AgentはBackend Agentに実装詳細（メソッド名、型名等）を
- 直接確認してOK。ただし設計変更が必要な場合は私（Orchestrator）に
- 報告すること。」
+あなたは {Backend|BFF|Frontend|E2E} Agent です。
+
+【Agent 間通信ルール - フルメッシュ型】
+- 他の全 Agent と SendMessage で直接通信可能。積極的に活用すること。
+- 以下を発見・決定した時点で関係 Agent 全員に即座に発信する義務がある:
+  * クエリ・条件式のハードコード (例: WHERE status='PENDING')
+  * レスポンス形状の選択 (フィールド命名、optional/null 表現)
+  * エラー区分の追加・変更 (新コード、HTTP ステータス、ErrorInfo Reason)
+  * バリデーション境界値、権限判定基準、横断的制約の発見
+- 1〜3行の簡潔な「設計判断ログ」をコミット前に送ること
+- 設計方針の変更が必要と判明したら勝手に決めず Orchestrator に上げる
+
+【横断的制約 (事前共有事項)】
+{Orchestrator が把握している rate limit / セッション / middleware の挙動等を列挙}
 ```
+
+**Orchestrator 中間チェックポイント:**
+- 各 Agent の主要層完了時 (例: Backend のリポジトリ層完了時) に、Orchestrator は能動的に「他 Agent が知るべき決定はあるか」を問い合わせる
+- 完了通知だけに頼らず、ファイルシステム (`git status`) も並行確認して暗黙前提の漏れを検知する
 
 #### 依存関係に応じたフェーズ分け実行
 
@@ -204,7 +241,7 @@ Task 3 (Backend Agent):
 - **型定義**: 共通型は`contracts/types/`に配置
 - **進捗確認**: Orchestratorが`TaskList`で全体進捗を把握。各Agentは`TaskUpdate`で進捗報告
 - **依存関係**: 「Agent間通信方針」と「フェーズ分け実行」に従い、依存関係に応じた起動順序を決定
-- **直接通信**: 実装詳細の確認はAgent間`SendMessage`で直接やり取りOK（方針変更はOrchestrator経由）
+- **直接通信 (フルメッシュ型)**: 全 Agent が `SendMessage` で相互直接通信可能。実装の暗黙前提（クエリのハードコード、レスポンス形状、エラー区分等）は発見した時点で関係 Agent 全員に即座に発信する義務あり。方針変更のみ Orchestrator 経由。
 
 #### Agent別の責務
 

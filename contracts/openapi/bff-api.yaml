@@ -23,6 +23,8 @@ tags:
     description: Service management operations
   - name: Contracts
     description: Contract management operations
+  - name: Approvals
+    description: Contract approval workflow operations (J-SOX segregation of duties)
 
 paths:
   /api/v1/auth/login:
@@ -907,6 +909,37 @@ paths:
                 properties:
                   contract:
                     $ref: '#/components/schemas/Contract'
+        '202':
+          description: Approval workflow created (amount changes require approval)
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - message
+                  - workflow_id
+                properties:
+                  message:
+                    type: string
+                    example: "承認待ちです"
+                  workflow_id:
+                    type: string
+                    format: uuid
+        '409':
+          description: Contract is locked due to a pending approval workflow
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                properties:
+                  error:
+                    type: string
+                    example: "既に承認待ちの変更があります"
+                  workflow_id:
+                    type: string
+                    format: uuid
         '400':
           description: Validation error or invalid status transition
           content:
@@ -964,6 +997,231 @@ paths:
                 $ref: '#/components/schemas/Error'
         '404':
           description: Contract not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/approvals:
+    get:
+      tags:
+        - Approvals
+      summary: List pending approval workflows
+      description: |
+        Returns a paginated list of pending approval workflows.
+        The current user's own requests are automatically excluded (segregation of duties).
+        Requires `contracts:approve` permission.
+      operationId: listPendingApprovals
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: List of pending approval workflows
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  workflows:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ApprovalWorkflow'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/approvals/{id}:
+    get:
+      tags:
+        - Approvals
+      summary: Get approval workflow detail
+      description: Returns details for a single approval workflow including old/new fee values.
+      operationId: getApprovalWorkflow
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Approval workflow detail
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  workflow:
+                    $ref: '#/components/schemas/ApprovalWorkflow'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Workflow not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/approvals/{id}/approve:
+    post:
+      tags:
+        - Approvals
+      summary: Approve a pending workflow
+      description: |
+        Approves a pending workflow and applies the contract changes.
+        The requester cannot approve their own request (returns 403).
+        Requires `contracts:approve` permission.
+      operationId: approveContract
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Workflow approved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  workflow:
+                    $ref: '#/components/schemas/ApprovalWorkflow'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Insufficient permissions or self-approval attempt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Workflow not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Workflow already processed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/approvals/{id}/reject:
+    post:
+      tags:
+        - Approvals
+      summary: Reject a pending workflow
+      description: |
+        Rejects a pending workflow with a required reason.
+        The requester cannot reject their own request (returns 403).
+        Requires `contracts:approve` permission.
+      operationId: rejectContract
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - rejection_reason
+              properties:
+                rejection_reason:
+                  type: string
+                  minLength: 10
+                  description: Reason for rejection (required, min 10 chars)
+      responses:
+        '200':
+          description: Workflow rejected
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  workflow:
+                    $ref: '#/components/schemas/ApprovalWorkflow'
+        '400':
+          description: Validation error (missing/short rejection_reason)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Insufficient permissions or self-rejection attempt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Workflow not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Workflow already processed
           content:
             application/json:
               schema:
@@ -1195,6 +1453,69 @@ components:
           type: integer
           example: 20
           description: Number of items per page
+
+    ApprovalWorkflow:
+      type: object
+      required:
+        - workflow_id
+        - contract_id
+        - contract_number
+        - merchant_name
+        - service_name
+        - requester_id
+        - status
+        - old_monthly_fee
+        - new_monthly_fee
+        - old_initial_fee
+        - new_initial_fee
+        - requested_at
+      properties:
+        workflow_id:
+          type: string
+          format: uuid
+        contract_id:
+          type: string
+          format: uuid
+        contract_number:
+          type: string
+          example: "C-00001"
+        merchant_name:
+          type: string
+        service_name:
+          type: string
+        requester_id:
+          type: string
+          format: uuid
+        approver_id:
+          type: string
+          format: uuid
+          nullable: true
+        status:
+          type: string
+          enum:
+            - PENDING
+            - APPROVED
+            - REJECTED
+        old_monthly_fee:
+          type: string
+          description: Previous monthly fee as decimal string
+        new_monthly_fee:
+          type: string
+          description: Requested monthly fee as decimal string
+        old_initial_fee:
+          type: string
+        new_initial_fee:
+          type: string
+        requested_at:
+          type: string
+          format: date-time
+        approved_at:
+          type: string
+          format: date-time
+          nullable: true
+        rejection_reason:
+          type: string
+          nullable: true
 
     Error:
       type: object

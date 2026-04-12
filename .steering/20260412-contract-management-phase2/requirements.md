@@ -165,7 +165,12 @@
 ### ビジネス制約
 1. **J-SOX要件**: 申請者≠承認者の職務分掌を厳守
 2. **後方互換性**: 既存のPhase 1機能に影響しない（金額以外の変更は従来通り）
-3. **権限**: `contracts:approve` 権限が必要（system-admin, contract-approver等）
+3. **権限**: `contracts:approve` 権限が必要（Phase 2では既存ロール `system-admin`, `contract-manager` を活用）
+4. **職務分掌の運用前提**: 
+   - Phase 2では `contract-manager` ロールが `contracts:update` と `contracts:approve` の両方を保持する
+   - システム的にはユーザー単位の職務分掌チェック（requester_id != approver_id）のみ実施
+   - **運用上は別担当者（別ユーザーアカウント）で申請と承認を分担することを前提とする**
+   - 将来的により厳格な役割分離が必要な場合は、Phase 3以降で `contract-approver` 専用ロールへの分離を検討する
 
 ---
 

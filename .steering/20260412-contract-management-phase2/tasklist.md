@@ -10,11 +10,26 @@ Proto定義とOpenAPI仕様をOrchestratorが事前に確定させてから各Ag
 ## Orchestrator（事前作業）
 
 #### Proto定義・OpenAPI仕様作成
-- [ ] `contracts/proto/approval.proto` 新規作成（ApprovalService RPC定義）
+- [ ] `contracts/proto/approval.proto` 新規作成（ApprovalService 4 RPC定義、optional フィールド使用）
 - [ ] `contracts/openapi/bff-api.yaml` に承認管理エンドポイント追加
-- [ ] BFF DBに `contracts:approve` 権限が存在するか確認（既存マイグレーションV8/V9で定義済みの想定）
 - [ ] `docs/glossary.md` に承認ワークフロー用語を追加
+
+#### 既存マイグレーション確認
+- [ ] BFF DBの `V8__seed_permissions.sql` で `contracts:approve` 定義済みを確認
+- [ ] BFF DBの `V9__seed_role_permissions.sql` で `system-admin` と `contract-manager` に `contracts:approve` 付与済みを確認
+- [ ] 確認結果: 既存で足りている場合は **新規マイグレーション作成しない**
+
+#### Backend CLAUDE.md 更新（スキーマ・RPC構成の統一）
+- [ ] `services/backend/CLAUDE.md` の `approval_workflows` テーブル定義を更新
+  - old_monthly_fee, new_monthly_fee, old_initial_fee, new_initial_fee カラムを追加
+  - change_id カラムを削除（contract_changesへの記録は `resource_type="approval_workflow"` + `resource_id=workflow_id` で統一）
+  - 職務分掌制約 `chk_approval_segregation` を追加
+- [ ] `services/backend/CLAUDE.md` の `ApprovalService` 定義を更新
+  - `GetApprovalWorkflow` RPC を追加（3 RPC → 4 RPC）
+
+#### featureブランチ作成
 - [ ] 各サブモジュールでfeatureブランチ作成: `feature/contract-management-phase2`
+- [ ] 親リポジトリでもfeatureブランチ作成
 
 ---
 
@@ -56,12 +71,16 @@ Proto定義とOpenAPI仕様をOrchestratorが事前に確定させてから各Ag
 
 #### ContractService修正
 - [ ] `internal/service/contract_service.go` - UpdateContract メソッド修正
-  - [ ] 既存PENDINGワークフローチェック（二重申請禁止）
-  - [ ] DRAFTステータスは承認不要
+  - [ ] DRAFTステータスチェック（DRAFT は承認不要で直接更新）
+  - [ ] **承認待ち中の全面ロック**: PENDINGワークフロー存在時は、金額変更だけでなく日付・ステータス等の他フィールド変更も含めて `FailedPrecondition` + `APPROVAL_PENDING` エラー返却（要件#7対応）
   - [ ] 金額変更検出（monthly_fee/initial_fee のいずれか）
-  - [ ] 金額変更時: ApprovalWorkflow作成 + 監査記録 + FailedPreconditionエラー返却
+  - [ ] 金額変更時: ApprovalWorkflow作成 + 監査記録 + `FailedPrecondition` + `APPROVAL_REQUIRED` エラー返却
   - [ ] 金額変更なし: 従来通り直接更新
-- [ ] 承認待ち中の契約は金額以外の変更もブロック（要検討: 制約の強さ）
+- [ ] 構造化エラーヘルパー関数の実装
+  - [ ] `buildApprovalRequiredError(workflow_id, contract_id)` - `google.rpc.ErrorInfo` で `Reason="APPROVAL_REQUIRED"` + metadata
+  - [ ] `buildApprovalPendingError(workflow_id, contract_id)` - `google.rpc.ErrorInfo` で `Reason="APPROVAL_PENDING"` + metadata
+  - [ ] `google.golang.org/genproto/googleapis/rpc/errdetails` パッケージを使用
+- [ ] **文字列マッチによるエラー判定は禁止**（design.md参照）
 
 #### 承認管理: gRPCハンドラー
 - [ ] `internal/grpc/approval_server.go` - ApprovalService 4 RPC実装
@@ -77,9 +96,11 @@ Proto定義とOpenAPI仕様をOrchestratorが事前に確定させてから各Ag
   - [ ] 存在しないワークフロー → NotFound
 - [ ] `internal/service/contract_service_test.go` - UpdateContract修正分のテスト追加
   - [ ] DRAFT契約の金額変更は承認不要で直接更新
-  - [ ] ACTIVE契約の金額変更でワークフロー作成
-  - [ ] 二重申請エラー
-  - [ ] 金額変更なしは従来通り更新
+  - [ ] ACTIVE契約の金額変更でワークフロー作成（ErrorInfo.Reason="APPROVAL_REQUIRED"）
+  - [ ] PENDINGワークフロー存在時の金額変更は APPROVAL_PENDING エラー
+  - [ ] **PENDINGワークフロー存在時の日付変更等（金額以外）も APPROVAL_PENDING エラー（要件#7）**
+  - [ ] 金額変更なし（通常の更新）は従来通り更新
+  - [ ] 構造化エラーの ErrorInfo.Metadata に workflow_id, contract_id が含まれること
 - [ ] `internal/grpc/approval_server_test.go` - gRPCハンドラーテスト
 - [ ] `go vet` / `go fmt` クリーン
 
@@ -99,9 +120,9 @@ Proto定義とOpenAPI仕様をOrchestratorが事前に確定させてから各Ag
 #### gRPCクライアント拡張
 - [ ] `internal/grpc/client.go` - ApprovalServiceClient追加
 
-#### 権限マイグレーション（必要な場合）
-- [ ] 既存マイグレーションで `contracts:approve` の割り当てを確認
-- [ ] 未定義なら `db/migrations/V13__seed_approval_permissions.sql` 作成
+#### 権限マイグレーション
+- [x] Orchestrator事前作業で既存マイグレーション（V8/V9）に `contracts:approve` 定義済みを確認済み
+- **新規マイグレーション作成は不要**（このタスクはスキップ）
 
 #### 承認管理: ハンドラー
 - [ ] `internal/handler/approval_handler.go`
@@ -112,10 +133,11 @@ Proto定義とOpenAPI仕様をOrchestratorが事前に確定させてから各Ag
 
 #### ContractHandler修正
 - [ ] `internal/handler/contract_handler.go` - UpdateContract修正
-  - [ ] Backendからの FailedPrecondition エラー判定
-  - [ ] 承認ワークフロー作成の場合: 202 Accepted + workflow情報を返す
-  - [ ] 二重申請の場合: 409 Conflict
-  - [ ] エラーメッセージのパース（workflow_id抽出）
+  - [ ] Backendからの構造化エラー（`google.rpc.ErrorInfo`）を `st.Details()` から取得
+  - [ ] `Reason == "APPROVAL_REQUIRED"` の場合: 202 Accepted + metadata から `workflow_id` 抽出して返す
+  - [ ] `Reason == "APPROVAL_PENDING"` の場合: 409 Conflict + `workflow_id` 返す
+  - [ ] **文字列マッチ（`strings.Contains`）は使用しない**（脆弱性回避）
+  - [ ] `google.golang.org/genproto/googleapis/rpc/errdetails` パッケージをインポート
 
 #### ルート追加
 - [ ] `cmd/server/main.go` に承認管理ルート追加
@@ -129,8 +151,9 @@ Proto定義とOpenAPI仕様をOrchestratorが事前に確定させてから各Ag
   - [ ] 却下理由空のバリデーション（400）
   - [ ] 職務分掌違反（gRPCから PermissionDenied を受けた場合の403変換）
 - [ ] `internal/handler/contract_handler_test.go` - UpdateContract修正分
-  - [ ] 金額変更時の202 Accepted
-  - [ ] 二重申請時の409 Conflict
+  - [ ] 金額変更時の202 Accepted（ErrorInfo.Reason="APPROVAL_REQUIRED"）
+  - [ ] 承認待ち中の409 Conflict（ErrorInfo.Reason="APPROVAL_PENDING"、金額変更以外の変更も含む）
+  - [ ] 構造化エラーのモックヘルパー作成（ErrorInfoを含むstatus.Statusを生成）
 - [ ] 既存テスト全パス
 - [ ] `go vet` / `go fmt` クリーン
 
@@ -177,7 +200,9 @@ Proto定義とOpenAPI仕様をOrchestratorが事前に確定させてから各Ag
 #### 契約詳細画面の修正
 - [ ] `src/components/contracts/ContractDetail.tsx`
   - [ ] 承認待ちワークフローがある場合、承認状態バッジを表示
+  - [ ] **承認待ち中は「編集」「解約」ボタンを非活性化**（UX改善、要件#7の全面ロックに対応）
   - [ ] 却下理由の表示（却下後に再編集可能にするため）
+  - [ ] 承認待ち中の契約編集試行時は BFF から 409 Conflict が返るため、エラートーストで通知
 
 #### テスト
 - [ ] `tests/ApprovalList.test.tsx` - 一覧表示テスト

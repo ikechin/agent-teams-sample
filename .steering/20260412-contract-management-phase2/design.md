@@ -88,15 +88,15 @@ message ApprovalWorkflowItem {
   string merchant_name = 4;       // JOIN結果
   string service_name = 5;        // JOIN結果
   string requester_id = 6;
-  string approver_id = 7;         // 承認/却下時のみ
+  optional string approver_id = 7;         // 承認/却下時のみセット（PENDING時はnil）
   string status = 8;              // PENDING, APPROVED, REJECTED
   string old_monthly_fee = 9;
   string new_monthly_fee = 10;
   string old_initial_fee = 11;
   string new_initial_fee = 12;
   string requested_at = 13;
-  string approved_at = 14;
-  string rejection_reason = 15;
+  optional string approved_at = 14;         // 承認/却下時のみセット
+  optional string rejection_reason = 15;    // 却下時のみセット
 }
 
 message ListPendingApprovalsRequest {
@@ -130,9 +130,71 @@ message ApprovalWorkflowResponse {
 }
 ```
 
+**Nullable フィールドの扱い:**
+- `approver_id`, `approved_at`, `rejection_reason` は `optional` として定義
+- Go側: `*string` ポインタで受け取り、nil の場合は JSON レスポンスで省略（`omitempty`）
+- Frontend側: TypeScript型で `string | null` として扱う
+- BFF側: `contractItemToMap` と同じパターンで空値を `nil` 変換（Phase 1 の `emptyToNil` ヘルパーを再利用）
+
 ### `contracts/proto/contract.proto`（修正）
 
-`UpdateContractRequest` のレスポンスは従来通りだが、金額変更時はgRPCエラー `FailedPrecondition` を返し、エラーメッセージに `workflow_id` を含める。
+`UpdateContractRequest` のレスポンスは従来通り。金額変更時はgRPCエラー `FailedPrecondition` を返すが、**エラー識別は文字列マッチではなく `google.rpc.ErrorInfo` による構造化エラー** で行う。
+
+**構造化エラーの仕様:**
+```go
+import (
+    errdetails "google.golang.org/genproto/googleapis/rpc/errdetails"
+    "google.golang.org/grpc/status"
+)
+
+// 金額変更 → 承認待ち作成時
+st := status.New(codes.FailedPrecondition, "金額変更には承認が必要です")
+detail := &errdetails.ErrorInfo{
+    Reason: "APPROVAL_REQUIRED",
+    Domain: "contract.example.com",
+    Metadata: map[string]string{
+        "workflow_id": workflow.WorkflowID,
+        "contract_id": req.ContractId,
+    },
+}
+stWithDetails, _ := st.WithDetails(detail)
+return nil, stWithDetails.Err()
+
+// 二重申請エラー時
+st := status.New(codes.FailedPrecondition, "既に承認待ちの変更があります")
+detail := &errdetails.ErrorInfo{
+    Reason: "APPROVAL_PENDING",
+    Domain: "contract.example.com",
+    Metadata: map[string]string{
+        "workflow_id": existing.WorkflowID,
+    },
+}
+```
+
+**BFF側の判定ロジック:**
+```go
+st, ok := status.FromError(err)
+if ok && st.Code() == codes.FailedPrecondition {
+    for _, detail := range st.Details() {
+        if errInfo, ok := detail.(*errdetails.ErrorInfo); ok {
+            switch errInfo.Reason {
+            case "APPROVAL_REQUIRED":
+                return c.JSON(http.StatusAccepted, map[string]interface{}{
+                    "message":     "承認待ちです",
+                    "workflow_id": errInfo.Metadata["workflow_id"],
+                })
+            case "APPROVAL_PENDING":
+                return c.JSON(http.StatusConflict, map[string]interface{}{
+                    "error":       "既に承認待ちの変更があります",
+                    "workflow_id": errInfo.Metadata["workflow_id"],
+                })
+            }
+        }
+    }
+}
+```
+
+これにより文字列マッチの脆さを排除し、i18n対応やメッセージ変更にも強い設計となる。
 
 ---
 
@@ -189,22 +251,32 @@ WHERE status = 'PENDING';
 
 ### ContractService.UpdateContract の修正ロジック
 
+**ロック方針（要件#7対応）:**
+承認待ち中（PENDING ワークフローが存在する）の契約は、金額以外の変更（ステータス遷移、日付等）も含めて**全面ロック**する。これにより承認フロー中の契約状態が安定し、監査証跡の一貫性が保たれる。
+
 ```go
+import (
+    errdetails "google.golang.org/genproto/googleapis/rpc/errdetails"
+    "google.golang.org/grpc/status"
+    "google.golang.org/grpc/codes"
+)
+
 func (s *ContractService) UpdateContract(ctx context.Context, req *pb.UpdateContractRequest) (*model.Contract, error) {
     current, err := s.repo.GetContract(ctx, req.ContractId)
     if err != nil {
         return nil, ErrNotFound
     }
 
-    // 既存のPENDINGワークフローチェック（二重申請禁止）
-    existing, _ := s.approvalRepo.GetPendingByContract(ctx, req.ContractId)
-    if existing != nil {
-        return nil, status.Error(codes.FailedPrecondition, "既に承認待ちの変更があります")
-    }
-
-    // DRAFTステータスは承認不要
+    // DRAFTステータスは承認フロー対象外（自由に更新可）
     if current.Status == "DRAFT" {
         return s.directUpdate(ctx, req, current)
+    }
+
+    // 承認待ち中の全面ロック: PENDINGワークフローが存在する場合、
+    // 金額変更であれ他のフィールド変更であれ、すべて拒否する
+    existing, _ := s.approvalRepo.GetPendingByContract(ctx, req.ContractId)
+    if existing != nil {
+        return nil, buildApprovalPendingError(existing.WorkflowID, req.ContractId)
     }
 
     // 金額変更検出
@@ -238,14 +310,46 @@ func (s *ContractService) UpdateContract(ctx context.Context, req *pb.UpdateCont
             return nil, err
         }
         
-        return nil, status.Errorf(codes.FailedPrecondition, 
-            "金額変更には承認が必要です (workflow_id=%s)", workflow.WorkflowID)
+        return nil, buildApprovalRequiredError(workflow.WorkflowID, req.ContractId)
     }
 
     // 金額変更なし: 即座に更新（既存ロジック）
     return s.directUpdate(ctx, req, current)
 }
+
+// 構造化エラーヘルパー（文字列マッチ回避のため）
+func buildApprovalRequiredError(workflowID, contractID string) error {
+    st := status.New(codes.FailedPrecondition, "金額変更には承認が必要です")
+    detail := &errdetails.ErrorInfo{
+        Reason: "APPROVAL_REQUIRED",
+        Domain: "contract.example.com",
+        Metadata: map[string]string{
+            "workflow_id": workflowID,
+            "contract_id": contractID,
+        },
+    }
+    stWithDetails, _ := st.WithDetails(detail)
+    return stWithDetails.Err()
+}
+
+func buildApprovalPendingError(workflowID, contractID string) error {
+    st := status.New(codes.FailedPrecondition, "承認待ちのため変更できません")
+    detail := &errdetails.ErrorInfo{
+        Reason: "APPROVAL_PENDING",
+        Domain: "contract.example.com",
+        Metadata: map[string]string{
+            "workflow_id": workflowID,
+            "contract_id": contractID,
+        },
+    }
+    stWithDetails, _ := st.WithDetails(detail)
+    return stWithDetails.Err()
+}
 ```
+
+**注意点:**
+- DRAFT→PENDINGワークフローは起こり得ない（DRAFTは承認不要で直接更新されるため）が、データ整合性のため DRAFT チェックを先に行う
+- 承認待ち中は契約詳細画面から「編集」ボタンを非活性にする（Frontend側で UX 改善）
 
 ### 職務分掌チェック（ApprovalService）
 
@@ -314,13 +418,25 @@ func (s *ApprovalService) ApproveContract(ctx context.Context, req *pb.ApproveCo
 
 ### contracts:approve 権限の割り当て
 
-既存のV8マイグレーションで `contracts:approve` 権限は定義済み。ロール割り当ては既存のV9で `system-admin` と `contract-manager` の両方に付与されている可能性が高いが、確認が必要。
+**確認済み:** 既存のBFFマイグレーションで以下が定義済みのため、Phase 2では新規マイグレーション不要。
+- `V8__seed_permissions.sql`: `contracts:approve` 権限を定義済み
+- `V9__seed_role_permissions.sql`: `system-admin` および `contract-manager` に `contracts:approve` を付与済み
 
-**注意:** contract-manager は申請者になることが多いので、承認者には `contract-approver` という専用ロールを新設する設計も考えられるが、Phase 2ではexisting ロールを活用する方針とする。
+Orchestrator事前作業で既存マイグレーションの内容を確認し、矛盾がないことを確認する。
+
+**注意:** Phase 2では `contract-manager` ロールが申請（`contracts:update`）と承認（`contracts:approve`）の両方を保持する。ユーザー単位の職務分掌チェック（requester_id != approver_id）で担保し、運用上は別担当者で申請・承認を分担する前提とする（requirements.md 参照）。将来的に専用ロール `contract-approver` への分離はPhase 3以降で検討する。
 
 ### UpdateContractハンドラーの修正
 
+構造化エラー（`google.rpc.ErrorInfo`）による判定を行う。文字列マッチは使用しない。
+
 ```go
+import (
+    errdetails "google.golang.org/genproto/googleapis/rpc/errdetails"
+    "google.golang.org/grpc/status"
+    "google.golang.org/grpc/codes"
+)
+
 func (h *ContractHandler) UpdateContract(c echo.Context) error {
     // ... gRPC呼び出し ...
     
@@ -328,16 +444,26 @@ func (h *ContractHandler) UpdateContract(c echo.Context) error {
     if err != nil {
         st, ok := status.FromError(err)
         if ok && st.Code() == codes.FailedPrecondition {
-            // 承認ワークフロー作成（または二重申請エラー）
-            if strings.Contains(st.Message(), "承認が必要") {
-                return c.JSON(http.StatusAccepted, map[string]interface{}{
-                    "message": "承認待ちです",
-                    "detail":  st.Message(),
-                })
+            // ErrorInfo の Reason で分岐
+            for _, detail := range st.Details() {
+                if errInfo, ok := detail.(*errdetails.ErrorInfo); ok {
+                    workflowID := errInfo.Metadata["workflow_id"]
+                    switch errInfo.Reason {
+                    case "APPROVAL_REQUIRED":
+                        // 承認ワークフロー作成 → 202 Accepted
+                        return c.JSON(http.StatusAccepted, map[string]interface{}{
+                            "message":     "承認待ちです",
+                            "workflow_id": workflowID,
+                        })
+                    case "APPROVAL_PENDING":
+                        // 二重申請 → 409 Conflict
+                        return c.JSON(http.StatusConflict, map[string]interface{}{
+                            "error":       "既に承認待ちの変更があります",
+                            "workflow_id": workflowID,
+                        })
+                    }
+                }
             }
-            return c.JSON(http.StatusConflict, map[string]string{
-                "error": st.Message(),
-            })
         }
         return handleGRPCError(c, err, "contract")
     }

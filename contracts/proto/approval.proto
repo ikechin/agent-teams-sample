@@ -8,6 +8,7 @@ option go_package = "github.com/ikechin/agent-teams-backend/internal/pb";
 
 service ApprovalService {
   rpc ListPendingApprovals(ListPendingApprovalsRequest) returns (ListPendingApprovalsResponse);
+  rpc ListWorkflowsByContract(ListWorkflowsByContractRequest) returns (ListWorkflowsByContractResponse);
   rpc GetApprovalWorkflow(GetApprovalWorkflowRequest) returns (ApprovalWorkflowResponse);
   rpc ApproveContract(ApproveContractRequest) returns (ApprovalWorkflowResponse);
   rpc RejectContract(RejectContractRequest) returns (ApprovalWorkflowResponse);
@@ -40,6 +41,19 @@ message ListPendingApprovalsRequest {
 message ListPendingApprovalsResponse {
   repeated ApprovalWorkflowItem workflows = 1;
   common.Pagination pagination = 2;
+}
+
+message ListWorkflowsByContractRequest {
+  string contract_id = 1;
+  // Optional status filter. Empty = return all statuses (PENDING/APPROVED/REJECTED).
+  string status = 2;
+  // Optional limit (default 20, max 100).
+  int32 limit = 3;
+}
+
+message ListWorkflowsByContractResponse {
+  // Ordered by requested_at DESC (newest first).
+  repeated ApprovalWorkflowItem workflows = 1;
 }
 
 message GetApprovalWorkflowRequest {

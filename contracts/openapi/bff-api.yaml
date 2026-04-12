@@ -1055,6 +1055,73 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /api/v1/contracts/{id}/approvals:
+    get:
+      tags:
+        - Approvals
+      summary: List approval workflows for a contract
+      description: |
+        Returns approval workflows for the specified contract, ordered by requested_at DESC.
+        Used by the contract detail view to display the current PENDING workflow (if any)
+        and the most recent REJECTED workflow (for showing rejection reason).
+        Requires `contracts:read` permission. No segregation-of-duties exclusion applied.
+      operationId: listContractApprovals
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          description: Optional status filter (PENDING / APPROVED / REJECTED). Omit to get all.
+          schema:
+            type: string
+            enum:
+              - PENDING
+              - APPROVED
+              - REJECTED
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: Approval workflows for the contract
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  workflows:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ApprovalWorkflow'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Contract not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /api/v1/approvals/{id}:
     get:
       tags:

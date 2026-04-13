@@ -19,6 +19,21 @@
 - [ ] Phase 2 で E2E テスト用に追加した `approver@example.com` の扱い (DB 再初期化で消える)
 - [ ] 構造化エラー規約 (`google.rpc.ErrorInfo`, Domain=`contract.example.com`)
 
+### 前提タスクの完了確認 (Phase 2)
+- [ ] 各サブモジュールが main ブランチの最新状態にあることを確認:
+  ```bash
+  git -C services/backend checkout main && git pull
+  git -C services/bff checkout main && git pull
+  git -C services/frontend checkout main && git pull
+  ```
+- [ ] `approval_workflows` テーブルが Phase 2 で作成済みであることを確認:
+  ```bash
+  docker compose exec -T backend-db psql -U backend_user -d backend_db \
+    -c "\d approval_workflows"
+  ```
+- [ ] `ApprovalService.ListPendingApprovals` gRPC が稼働していることを確認
+- [ ] Frontend `Sidebar.tsx` に「承認管理」リンクが既存であることを確認
+
 ### featureブランチ作成 (3 サブモジュール + 親)
 - [ ] backend: `feature/approval-count-badge`
 - [ ] bff: `feature/approval-count-badge`

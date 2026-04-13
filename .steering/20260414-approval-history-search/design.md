@@ -26,6 +26,8 @@ sequenceDiagram
 
 `services/backend/db/queries/approval.sql` に追加:
 
+> **注記 (2026-04-14 実装後追記)**: 以下の SQL は `@param::type IS NULL` という擬似記法で書いているが、実際の sqlc では nullable パラメータは `sqlc.narg('param')::type IS NULL` を使用する。実装は sqlc.narg 版で行われており、どちらも意味は同等。次回以降のステアリングでは `sqlc.narg` 記法を採用することを推奨。
+
 ```sql
 -- name: ListApprovalHistory :many
 SELECT

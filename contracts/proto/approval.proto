@@ -12,6 +12,7 @@ service ApprovalService {
   rpc GetApprovalWorkflow(GetApprovalWorkflowRequest) returns (ApprovalWorkflowResponse);
   rpc ApproveContract(ApproveContractRequest) returns (ApprovalWorkflowResponse);
   rpc RejectContract(RejectContractRequest) returns (ApprovalWorkflowResponse);
+  rpc CountPendingApprovals(CountPendingApprovalsRequest) returns (CountPendingApprovalsResponse);
 }
 
 message ApprovalWorkflowItem {
@@ -73,4 +74,13 @@ message RejectContractRequest {
 
 message ApprovalWorkflowResponse {
   ApprovalWorkflowItem workflow = 1;
+}
+
+message CountPendingApprovalsRequest {
+  // 空文字なら除外なし、UUID 指定で requester_id != $1 の SoD 除外
+  string exclude_requester_id = 1;
+}
+
+message CountPendingApprovalsResponse {
+  int64 count = 1;
 }

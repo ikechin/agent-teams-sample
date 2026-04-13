@@ -1002,6 +1002,53 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /api/v1/approvals/pending-count:
+    get:
+      tags:
+        - Approvals
+      summary: Count pending approval workflows
+      description: |
+        Returns the number of pending approval workflows the current user is
+        eligible to approve. The current user's own requests are automatically
+        excluded (segregation of duties). Used by the sidebar badge to show
+        "awaiting your approval" count.
+
+        Note: This endpoint is excluded from audit logging (read-only polling
+        endpoint). Only applies auth middleware. Write operations
+        (approve/reject) remain fully audited.
+
+        Requires `contracts:approve` permission.
+      operationId: getPendingApprovalCount
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Pending approval count
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - count
+                properties:
+                  count:
+                    type: integer
+                    format: int64
+                    example: 3
+                    description: Number of pending workflows awaiting the current user's approval
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /api/v1/approvals:
     get:
       tags:

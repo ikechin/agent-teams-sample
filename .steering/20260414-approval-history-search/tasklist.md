@@ -202,12 +202,18 @@
 
 #### 実装フェーズ (Orchestrator からの wake-up DM 受信後)
 - [ ] Docker Compose rebuild は Orchestrator が実施済みであることを確認
-- [ ] `e2e/tests/contracts/approval-history-search.spec.ts` 新規作成 (4〜5 シナリオ):
+- [ ] `e2e/tests/contracts/approval-history-search.spec.ts` 新規作成 (4 シナリオ):
   1. **初期表示**: 履歴ページにアクセスして全件表示 (PENDING/APPROVED/REJECTED 混在を確認)
   2. **ステータスフィルタ**: APPROVED のみ / REJECTED のみを切り替えて結果が絞り込まれる
   3. **契約番号部分一致**: `C-00001` で検索 → 該当履歴のみ表示
-  4. **権限制御**: `contracts:read` なしのユーザー (作成可能なら) または viewer ロールではサイドバーに「承認履歴」が表示される (viewer は contracts:read あり) — 逆に `contracts:read` なしロールがない場合は「権限ありで表示される」テストのみ
+  4. **権限あり (viewer) で閲覧可能**: `viewer@example.com` でログイン → サイドバーに「承認履歴」表示、ページアクセス可能、結果表示される
   5. **詳細画面遷移**: 結果行クリック → `/dashboard/approvals/[id]` に遷移
+
+**シナリオ4 の補足:** 既存 seed で `contracts:read` は全ロール (system-admin / contract-manager /
+sales / viewer) に付与されているため、「権限なし」ロールが存在しない。動的な seed 追加はスコープ外
+なので、**E2E では「contracts:read あり (viewer) で閲覧可能」を検証するのみ** に留め、
+権限拒否 (`contracts:read` なしで 403) は **BFF ハンドラの単体テスト側**でカバーする。
+(`.steering/20260414-approval-history-search/steering-review.md` W2 参照)
 - [ ] BFF login rate limit を考慮し、ログイン回数最小化 (合計 3 回以下)
 - [ ] 新規テストは単独実行で全パス
 - [ ] フルスイート `--workers=1` もデグレなし (既存 36 + 新規 5 = 41 を目標)

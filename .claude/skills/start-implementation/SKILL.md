@@ -433,6 +433,77 @@ Agent Teamsを使用して、以下のタスクを並行実装してください
 Agent構成は tasklist.md の「Agent別タスク分担」セクションを参照してください。
 ```
 
+### 8.5. 依存関係のある Agent 間のハンドオフ (必須)
+
+**Agent Teams 運用の最重要注意点:** 子 Agent は他 Agent の `TaskUpdate(completed)` を
+**自律的には検知しません**。次のメッセージが届くまで idle のまま待機するため、
+**Orchestrator が明示的に下流 Agent を wake up する必要があります**。
+
+#### シナリオ
+
+典型的なパターン (Frontend が BFF の OpenAPI 更新を待つ場合):
+
+```
+1. backend-agent 実装中 → 完了 → TaskUpdate(completed) → idle
+2. bff-agent 実装中 → 完了 → TaskUpdate(completed) → idle
+3. frontend-agent は D1-D4 合意後ずっと idle (BFF 完了を自動検知できない)
+   → Orchestrator の介入がないと永久に停止
+```
+
+#### Orchestrator がやるべきこと
+
+上流 Agent (backend/bff) からの完了通知を会話ターンで受け取ったら、**下流 Agent
+(frontend/e2e) に明示的な wake-up DM を送信する**:
+
+```
+SendMessage({
+  to: "frontend-agent",
+  summary: "Backend/BFF完了、実装開始してください",
+  message: "<以下を含む具体的な指示>"
+})
+```
+
+wake-up DM に含めるべき内容:
+- **何が完了したか** (例: "bff-agent が GET /api/v1/approvals/pending-count を実装完了、
+  親リポの OpenAPI yaml も更新済み")
+- **合意済み仕様の再掲** (D1-D4 の結論、エンドポイント名、レスポンス形状等)
+- **次にやるべき具体的な手順** (例: "`cd ../.. && git pull` で親リポ同期 →
+  `npm run generate:api-types` で型生成 → 実装")
+- **完了条件** (テスト、lint、type-check、コミット・プッシュ、TaskUpdate)
+
+#### ハンドオフのチェックポイント
+
+| 依存関係 | Wake-up タイミング |
+|---|---|
+| BFF Agent は Backend proto 完了後に起動 | Backend Agent が `TaskUpdate(completed)` → Orchestrator が BFF Agent に DM |
+| Frontend Agent は BFF OpenAPI 完了後に起動 | BFF Agent が `TaskUpdate(completed)` → Orchestrator が Frontend Agent に DM |
+| E2E Agent は Frontend 完了後に起動 | Frontend Agent が `TaskUpdate(completed)` → Orchestrator が E2E Agent を spawn または DM |
+
+#### TaskCreate 時の依存関係明示 (併用推奨)
+
+`TaskCreate` の description に依存関係を明記し、起動後に `TaskUpdate` の `addBlockedBy`
+で blocker を設定:
+
+```
+TaskCreate(
+  subject="Frontend: サイドバーバッジ実装",
+  description="依存: Task #2 完了後。BFF の OpenAPI yaml が親リポに push されてから
+   型再生成 → 実装。合意済み仕様は .steering/<dir>/design.md を参照"
+)
+TaskUpdate(taskId="3", addBlockedBy=["2"])
+```
+
+これにより下流 Agent が `TaskList` で「自分のタスクは blocker 待ち」と認識できる。
+ただし **blocker 解消の自律検知はできない**ので、Orchestrator の明示的 wake-up DM は
+引き続き必須。
+
+#### 実例 (参考)
+
+`.steering/20260413-approval-count-badge/retrospective.md` に本問題の初回観測ケースが
+記録されている。Frontend Agent が BFF 完了後も idle のまま動かず、Orchestrator が
+ファイルシステム覗き見で検知して wake-up DM を送った事例。次回以降は本セクションに従って
+完了通知を受けた時点で即座に下流に DM すれば回避可能。
+
 ### 9. チームの shutdown と TeamDelete
 
 全タスク完了後、チーム context を片付ける:

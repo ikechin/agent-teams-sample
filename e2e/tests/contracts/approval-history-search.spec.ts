@@ -9,7 +9,6 @@ const VIEWER_EMAIL = 'viewer@example.com';
 const VIEWER_PASSWORD = 'password123';
 
 const BFF_URL = process.env.BFF_URL || 'http://localhost:8080';
-const HISTORY_NAV = 'a[href="/dashboard/approvals/history"]';
 
 function ensureApproverUser() {
   execSync(
@@ -230,7 +229,7 @@ test.describe.serial('承認履歴検索 E2E', () => {
   test('1. 初期表示: PENDING/APPROVED/REJECTED 混在の全件が表示される', async () => {
     await requesterPage.goto('/dashboard/approvals/history');
     await expect(
-      requesterPage.locator('h2:has-text("承認履歴")'),
+      requesterPage.getByRole('heading', { name: '承認履歴' }),
     ).toBeVisible();
 
     // Table rows (exclude header). We expect at least the 3 workflows
@@ -274,16 +273,20 @@ test.describe.serial('承認履歴検索 E2E', () => {
 
     // Finally, exercise the filter form UI round-trip to cover URL sync.
     await requesterPage.goto('/dashboard/approvals/history');
-    await requesterPage.selectOption('select#status', 'APPROVED');
-    await requesterPage.click('button[type="submit"]:has-text("検索")');
+    await requesterPage
+      .getByLabel('ステータス')
+      .selectOption('APPROVED');
+    await requesterPage.getByRole('button', { name: '検索' }).click();
     await requesterPage.waitForURL(/status=APPROVED/);
   });
 
   test('3. 契約番号部分一致で対象契約の履歴のみが表示される', async () => {
     await requesterPage.goto('/dashboard/approvals/history');
 
-    await requesterPage.fill('input#contractNumber', targetContractNumber);
-    await requesterPage.click('button[type="submit"]:has-text("検索")');
+    await requesterPage
+      .getByLabel('契約番号 (部分一致)')
+      .fill(targetContractNumber);
+    await requesterPage.getByRole('button', { name: '検索' }).click();
     await requesterPage.waitForURL(
       new RegExp(`contract_number=${targetContractNumber}`),
     );
@@ -305,13 +308,13 @@ test.describe.serial('承認履歴検索 E2E', () => {
     await viewerPage.goto('/dashboard');
 
     // Sidebar nav for history is visible to contracts:read holders.
-    const nav = viewerPage.locator(HISTORY_NAV);
+    const nav = viewerPage.getByRole('link', { name: '承認履歴' });
     await expect(nav).toBeVisible();
 
     await nav.click();
     await viewerPage.waitForURL('**/dashboard/approvals/history');
     await expect(
-      viewerPage.locator('h2:has-text("承認履歴")'),
+      viewerPage.getByRole('heading', { name: '承認履歴' }),
     ).toBeVisible();
 
     const rows = viewerPage.locator('table tbody tr');

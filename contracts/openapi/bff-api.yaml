@@ -1102,6 +1102,103 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /api/v1/approvals/history:
+    get:
+      tags:
+        - Approvals
+      summary: List approval history with filters
+      description: |
+        Returns a paginated list of approval workflows across all statuses
+        (PENDING / APPROVED / REJECTED), with optional filters by status,
+        contract number (partial match), requester/approver id, and requested
+        date range. Ordered by requested_at DESC. Requires `contracts:read`
+        permission (approval authority is not required). Access is audit-logged.
+      operationId: listApprovalHistory
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: status
+          in: query
+          description: Optional status filter. Omit to get all statuses.
+          schema:
+            type: string
+            enum:
+              - PENDING
+              - APPROVED
+              - REJECTED
+        - name: contract_number
+          in: query
+          description: Partial match (case-insensitive) against contract_number.
+          schema:
+            type: string
+        - name: requester_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: approver_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: requested_from
+          in: query
+          description: RFC3339 / ISO8601 lower bound on requested_at (inclusive).
+          schema:
+            type: string
+            format: date-time
+        - name: requested_to
+          in: query
+          description: RFC3339 / ISO8601 upper bound on requested_at (inclusive).
+          schema:
+            type: string
+            format: date-time
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: Paginated approval history
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  workflows:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ApprovalWorkflow'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '400':
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /api/v1/contracts/{id}/approvals:
     get:
       tags:

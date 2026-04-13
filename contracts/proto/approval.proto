@@ -13,6 +13,7 @@ service ApprovalService {
   rpc ApproveContract(ApproveContractRequest) returns (ApprovalWorkflowResponse);
   rpc RejectContract(RejectContractRequest) returns (ApprovalWorkflowResponse);
   rpc CountPendingApprovals(CountPendingApprovalsRequest) returns (CountPendingApprovalsResponse);
+  rpc ListApprovalHistory(ListApprovalHistoryRequest) returns (ListApprovalHistoryResponse);
 }
 
 message ApprovalWorkflowItem {
@@ -83,4 +84,29 @@ message CountPendingApprovalsRequest {
 
 message CountPendingApprovalsResponse {
   int64 count = 1;
+}
+
+message ListApprovalHistoryRequest {
+  // Empty = all statuses. "PENDING" / "APPROVED" / "REJECTED" supported.
+  string status_filter = 1;
+  // Partial match (ILIKE). Empty = no filter.
+  string contract_number = 2;
+  // Exact UUID match. Empty = no filter.
+  string requester_id = 3;
+  // Exact UUID match. Empty = no filter.
+  string approver_id = 4;
+  // RFC3339. Empty = no lower bound.
+  string requested_from = 5;
+  // RFC3339. Empty = no upper bound.
+  string requested_to = 6;
+  // 1-indexed. Default 1.
+  int32 page = 7;
+  // Default 20, max 100.
+  int32 limit = 8;
+}
+
+message ListApprovalHistoryResponse {
+  // Ordered by requested_at DESC.
+  repeated ApprovalWorkflowItem workflows = 1;
+  common.Pagination pagination = 2;
 }

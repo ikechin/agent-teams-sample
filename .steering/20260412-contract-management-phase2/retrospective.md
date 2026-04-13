@@ -80,6 +80,18 @@
   - CLAUDE.md「Agent間通信方針」を「（ハイブリッド型）」→「（フルメッシュ型）」に書き換え
   - 全 Agent が `SendMessage` で相互直接通信、設計判断ログの即時発信を義務化
   - Orchestrator 中間チェックポイント (主要層完了時の能動問い合わせ) を追加
+
+- [x] **追加発見と訂正 (2026-04-13): Phase 2 はそもそも真の Agent Teams ではなかった**
+  - `TeamCreate` の deferred スキーマを実際に確認した結果、以下が判明:
+    - 真の Agent Teams は `TeamCreate` でチーム context を作成し、`Agent` ツールに `team_name` 必須指定で spawn する必要がある
+    - Phase 2 では `TeamCreate` を呼ばず、`team_name` も指定していなかった → ただの並列バックグラウンド subagent ×3 でしかなかった
+    - 子 Agent 同士は互いを認識する経路がなく、SendMessage 通信が成立していなかった
+    - これが H1 (Backend のクエリハードコードが他 Agent に伝わらない) の根本原因
+  - **訂正したドキュメント:**
+    - `CLAUDE.md`: 「Agent Teams の正しい使い方」セクションを新設し、TeamCreate → TaskCreate → Agent(team_name) → TaskUpdate(owner) → 自動配信 → shutdown_request → TeamDelete の正しいフローを詳述
+    - 「メッセージは自動配信される」「Peer DM の可視性」「Idle は正常状態」「broadcast は高コスト」等の Agent Teams 仕様を明文化
+    - Phase 2 で git status 覗き見を主手段にしていた誤りを「補助手段に留める」と訂正
+    - `.claude/skills/start-implementation/SKILL.md`: ステップ 7.5 (TeamCreate)、7.6 (TaskCreate)、8 (Agent + team_name)、9 (shutdown + TeamDelete) を追加。Agent 起動プロンプトテンプレに team config 参照、TaskUpdate ベースの完了報告を反映
 - [x] **A1 を併せて反映: 中間チェックポイント方式の導入**
   - フルメッシュ型と統合する形で CLAUDE.md「Orchestrator 中間チェックポイント」項を追加
 - [x] **A2: 横断的非機能要件の事前共有を Orchestrator 必須作業化**

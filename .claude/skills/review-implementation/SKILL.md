@@ -7,6 +7,18 @@ description: Review implementation against steering files specification
 
 このスキルは、Agent Teamsで実装された成果物がステアリングファイルの仕様に準拠しているかを包括的にレビューします。
 
+## ⚠️ レビュアー向けガードレール (2026-04-14 振り返り由来)
+
+レビュー対象のテスト/静的解析が **すべてクリーン** な場合、以下の種類の指摘は **誤検出の可能性が高い** ため Critical として報告する前に必ず二次確認する:
+
+1. **シンボル未定義エラー** — `go vet` / `go test` / `tsc` が通っているなら、定義はどこかに存在する (別ファイル、同一パッケージ、import 先等)。言語のスコープルールを再確認してから報告すること
+2. **型不一致** — 型チェックが通っているなら実行時不整合はない
+3. **import 漏れ** — コンパイルが通っているなら import は足りている
+
+誤検出の具体例 (`20260414-approval-history-search`): Go の同一 package 内 const `defaultPageSize` が別ファイル (`merchant_service.go`) で定義されていたのを「未定義」と誤報告。Go package scope の基本を見落としていた。
+
+**ルール**: 静的解析/テストがクリーンな場合、言語仕様レベルの違反指摘は **必ず Grep で当該シンボルの定義箇所を確認** してから報告する。見つからない場合のみ Critical 候補とする。
+
 ## Parameters
 
 - `$1`: ステアリングディレクトリ名（例: `20250407-frontend-bff-only`）

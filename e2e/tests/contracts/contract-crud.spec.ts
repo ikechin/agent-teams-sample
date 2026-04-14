@@ -1,13 +1,17 @@
 import { test, expect, Page } from '@playwright/test';
-import { login, waitForElement } from '../../utils/test-helpers';
+import { waitForElement } from '../../utils/test-helpers';
+import { ROLES } from '../../utils/roles';
+
+test.use({ storageState: ROLES['contract-manager'].storageStatePath });
 
 test.describe.serial('契約管理CRUD操作', () => {
   let page: Page;
   let createdContractId: string;
 
   test.beforeAll(async ({ browser }) => {
-    page = await browser.newPage();
-    await login(page, process.env.TEST_USER_EMAIL || 'test@example.com', process.env.TEST_USER_PASSWORD || 'password123');
+    page = await browser.newPage({
+      storageState: ROLES['contract-manager'].storageStatePath,
+    });
   });
 
   test.afterAll(async () => {

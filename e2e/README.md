@@ -43,6 +43,90 @@ e2e/
 
 ---
 
+## 認証パターン (storageState + setup project)
+
+2026-04-14 より、**ログイン処理は Playwright の setup project + storageState パターン**に統一しました。
+各 spec 内で UI login を実行してはいけません (BFF rate limit 10/min/IP burst 10 との干渉を防ぐため)。
+
+### 仕組み
+
+1. `e2e/tests/auth.setup.ts` が起動時に 1 回だけ各ロールで UI login を実行
+2. セッション Cookie を `e2e/.auth/<role>.json` に保存 (`.gitignore` 対象)
+3. 通常の spec は `storageState` 経由で認証済み状態から開始
+4. storageState ファイルが 30 分以内に生成されていれば再 login をスキップ (連続実行の rate limit 回避)
+
+### 新規 spec テンプレート
+
+```ts
+import { test, expect, Page } from '@playwright/test';
+import { ROLES } from '../../utils/roles';
+
+test.use({ storageState: ROLES['contract-manager'].storageStatePath });
+
+test.describe.serial('新機能', () => {
+  let page: Page;
+
+  test.beforeAll(async ({ browser }) => {
+    page = await browser.newPage({
+      storageState: ROLES['contract-manager'].storageStatePath,
+    });
+  });
+
+  test.afterAll(async () => await page.close());
+
+  test('...', async () => {
+    await page.goto('/dashboard/your-page');
+    // ... assertions
+  });
+});
+```
+
+### API context で認証済みリクエスト
+
+API 呼び出し (例: fixture データ作成) も `storageState` を流用できる:
+
+```ts
+const apiCtx = await request.newContext({
+  storageState: ROLES['contract-manager'].storageStatePath,
+});
+await apiCtx.post('/api/v1/contracts', { data: ... });
+```
+
+セッション Cookie の Domain は `localhost` なので Frontend/BFF 両方で認証が効きます。
+
+### 複数ロールを使うテスト
+
+```ts
+const requesterContext = await browser.newContext({
+  storageState: ROLES['contract-manager'].storageStatePath,
+});
+const approverContext = await browser.newContext({
+  storageState: ROLES['approver'].storageStatePath,
+});
+```
+
+### 例外: login フロー自体のテスト
+
+`auth/login-flow.spec.ts` は login UI を検証するため、空 storageState を明示指定:
+
+```ts
+test.use({ storageState: { cookies: [], origins: [] } });
+```
+
+### ロールの追加
+
+新しいロールが必要になったら:
+1. `e2e/utils/roles.ts` の `ROLES` に追加
+2. `e2e/utils/seed-users.ts` に投入関数を追加 (必要なら)
+3. `e2e/tests/auth.setup.ts` に `setup('authenticate as <role>', ...)` を追加
+
+### 非推奨: `login()` ヘルパー
+
+`e2e/utils/test-helpers.ts` の `login()` 関数は `@deprecated` です。
+ad-hoc デバッグや login-flow.spec.ts 以外では呼び出さないでください。
+
+---
+
 ## セットアップ
 
 ### 依存関係のインストール

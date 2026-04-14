@@ -1,46 +1,10 @@
 import { test, expect, Page, BrowserContext, request } from '@playwright/test';
-import { execSync } from 'child_process';
+import { ROLES } from '../../utils/roles';
 
-const REQUESTER_EMAIL = 'test@example.com';
-const REQUESTER_PASSWORD = 'password123';
-const APPROVER_EMAIL = 'approver@example.com';
-const APPROVER_PASSWORD = 'password123';
+const REQUESTER_EMAIL = ROLES['contract-manager'].email;
+const REQUESTER_PASSWORD = ROLES['contract-manager'].password;
 
 const BFF_URL = process.env.BFF_URL || 'http://localhost:8080';
-
-/**
- * Robust login that retries 3 times. We can't depend on the global
- * test-helpers `login()` because shared test state (large audit_logs / many
- * accumulated sessions) can make a single login attempt slow enough to
- * exceed its 15s timeout when this spec runs after the rest of the suite.
- */
-async function loginWithRetry(page: Page, email: string, password: string) {
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    try {
-      await page.goto('/login', { waitUntil: 'domcontentloaded' });
-      await page.fill('[name="email"]', email);
-      await page.fill('[name="password"]', password);
-      await page.click('button[type="submit"]');
-      await page.waitForURL('**/dashboard**', { timeout: 20000 });
-      return;
-    } catch (err) {
-      if (attempt === 3) throw err;
-      await page.waitForTimeout(1500);
-    }
-  }
-}
-
-/**
- * Ensure the approver user exists. Uses a direct DB upsert (no API login)
- * to avoid spending a login-rate-limit token.
- */
-function ensureApproverUser() {
-  // Run docker compose from the project root (e2e/ has no compose file).
-  execSync(
-    `docker compose exec -T bff-db psql -U bff_user -d bff_db -c "INSERT INTO users (email, password_hash, name, role_id) VALUES ('${APPROVER_EMAIL}', (SELECT password_hash FROM users WHERE email='${REQUESTER_EMAIL}'), '承認者太郎', 'contract-manager') ON CONFLICT (email) DO NOTHING;"`,
-    { stdio: 'inherit', cwd: `${__dirname}/../../..` },
-  );
-}
 
 /**
  * Create a fresh ACTIVE contract using the supplied APIRequestContext.
@@ -94,27 +58,25 @@ test.describe.serial('承認ワークフロー E2E', () => {
   let contractId: string;
 
   test.beforeAll(async ({ browser }) => {
-    ensureApproverUser();
-
-    // Total login budget for this entire spec: 3 (1 API + 2 browser).
-    // Verification calls reuse the same APIRequestContext to avoid extras.
-    apiCtx = await request.newContext();
-    const apiLogin = await apiCtx.post(`${BFF_URL}/api/v1/auth/login`, {
-      data: { email: REQUESTER_EMAIL, password: REQUESTER_PASSWORD },
+    // setup project が UI login で取得した session_token cookie (domain=localhost)
+    // は Frontend/BFF 両方のオリジンにマッチするので、API 呼び出しにも流用できる。
+    // ここで login API を追加で叩く必要はない (合計 login=ゼロ)。
+    apiCtx = await request.newContext({
+      storageState: ROLES['contract-manager'].storageStatePath,
     });
-    expect(apiLogin.ok()).toBeTruthy();
 
     contractId = await createActiveContract(apiCtx);
 
-    // Isolated browser contexts so cookie state cannot bleed between
-    // requester/approver and isn't left behind for subsequent specs.
-    requesterContext = await browser.newContext();
+    // ロール別 storageState を当てた browser context で即座に認証済み状態になる。
+    requesterContext = await browser.newContext({
+      storageState: ROLES['contract-manager'].storageStatePath,
+    });
     requesterPage = await requesterContext.newPage();
-    await loginWithRetry(requesterPage, REQUESTER_EMAIL, REQUESTER_PASSWORD);
 
-    approverContext = await browser.newContext();
+    approverContext = await browser.newContext({
+      storageState: ROLES['approver'].storageStatePath,
+    });
     approverPage = await approverContext.newPage();
-    await loginWithRetry(approverPage, APPROVER_EMAIL, APPROVER_PASSWORD);
   });
 
   test.afterAll(async () => {

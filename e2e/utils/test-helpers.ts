@@ -3,16 +3,17 @@ import { Page, expect } from '@playwright/test';
 /**
  * ログイン処理 (rate limit リトライ組み込み)
  *
- * BFF `/api/v1/auth/login` は 10/min/IP burst 10 で rate limit がかかる。
- * フルスイート (`--workers=1`) で多数の spec が beforeEach login する結果、
- * burst を使い切って後続 spec が 429 で落ちる事象があったため、
- * ここでは既定でリトライ + 指数バックオフを行う。
+ * **⚠️ 非推奨 (2026-04-14)**: 通常 spec からの呼び出しは
+ * `test.use({ storageState: ROLES['<role>'].storageStatePath })` 方式に移行済み。
+ * 本関数は以下の用途にのみ使用する:
+ *   - `auth/login-flow.spec.ts` の login UI 自体の検証
+ *   - ad-hoc デバッグ / 新しいロール追加時の一時的な動作確認
  *
- * リトライ条件: 遷移タイムアウト、429 レスポンス表示、または
- * `waitForURL('**\/dashboard**')` が時間内に成立しないケース全般。
+ * リトライロジックは rate limit 対策の保険として残置しているが、
+ * 通常運用では発火しないはず。発火が観測された場合は login-flow.spec 以外での
+ * 呼び出しがないか確認すること。
  *
- * 既存 spec (呼び出し側) は変更不要 — シグネチャは後方互換。
- * rate limit 緩和の一部として追加 (2026-04-13)。
+ * @deprecated setup project + storageState パターンを使用してください
  */
 export async function login(
   page: Page,

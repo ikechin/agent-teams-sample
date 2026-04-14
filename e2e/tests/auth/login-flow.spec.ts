@@ -1,6 +1,11 @@
 import { test, expect } from '@playwright/test';
 import { login } from '../../utils/test-helpers';
 
+// このスペックは login UI フローそのものを検証するため、
+// setup project の storageState (認証済み状態) を適用してはならない。
+// 明示的に空 state を指定して未ログイン状態から各 test を開始する。
+test.use({ storageState: { cookies: [], origins: [] } });
+
 test.describe('ログインフロー', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/login');

@@ -1,30 +1,10 @@
 import { test, expect, Page, BrowserContext, request } from '@playwright/test';
 import { execSync } from 'child_process';
-
-const REQUESTER_EMAIL = 'test@example.com';
-const REQUESTER_PASSWORD = 'password123';
-const APPROVER_EMAIL = 'approver@example.com';
-const APPROVER_PASSWORD = 'password123';
-const VIEWER_EMAIL = 'viewer@example.com';
-const VIEWER_PASSWORD = 'password123';
+import { ROLES } from '../../utils/roles';
 
 const BFF_URL = process.env.BFF_URL || 'http://localhost:8080';
 const BADGE = '[data-testid="approval-count-badge"]';
 const APPROVAL_NAV = 'a[href="/dashboard/approvals"]';
-
-function ensureApproverUser() {
-  execSync(
-    `docker compose exec -T bff-db psql -U bff_user -d bff_db -c "INSERT INTO users (email, password_hash, name, role_id) VALUES ('${APPROVER_EMAIL}', (SELECT password_hash FROM users WHERE email='${REQUESTER_EMAIL}'), '承認者太郎', 'contract-manager') ON CONFLICT (email) DO NOTHING;"`,
-    { stdio: 'inherit', cwd: `${__dirname}/../../..` },
-  );
-}
-
-function ensureViewerUser() {
-  execSync(
-    `docker compose exec -T bff-db psql -U bff_user -d bff_db -c "INSERT INTO users (email, password_hash, name, role_id) VALUES ('${VIEWER_EMAIL}', (SELECT password_hash FROM users WHERE email='${REQUESTER_EMAIL}'), '閲覧太郎', 'viewer') ON CONFLICT (email) DO NOTHING;"`,
-    { stdio: 'inherit', cwd: `${__dirname}/../../..` },
-  );
-}
 
 /**
  * Clear any pending approval workflows so the spec has a deterministic
@@ -86,50 +66,31 @@ test.describe.serial('承認待ち件数バッジ E2E', () => {
   let contractId: string;
 
   test.beforeAll(async ({ browser }) => {
-    ensureApproverUser();
-    ensureViewerUser();
     clearPendingApprovals();
 
-    // Login budget: 3 total (API only, no browser UI logins).
-    // BFF rate-limits POST /auth/login at 10/min/IP burst 10, and this spec
-    // runs at the tail of the suite so we minimize token usage.
-    apiCtx = await request.newContext();
-    const apiLogin = await apiCtx.post(`${BFF_URL}/api/v1/auth/login`, {
-      data: { email: REQUESTER_EMAIL, password: REQUESTER_PASSWORD },
+    // setup project (auth.setup.ts) が contract-manager / approver / viewer の
+    // storageState を生成済み。全 API/browser context はそれを流用するので
+    // 本スペックでの login 呼び出しはゼロ。
+    apiCtx = await request.newContext({
+      storageState: ROLES['contract-manager'].storageStatePath,
     });
-    expect(apiLogin.ok()).toBeTruthy();
 
     contractId = await createActiveContract(apiCtx);
 
-    // Reuse the API session cookie jar for the requester browser context
-    // (httpOnly session + csrf cookies transfer via storageState).
-    const requesterState = await apiCtx.storageState();
-    requesterContext = await browser.newContext({ storageState: requesterState });
+    requesterContext = await browser.newContext({
+      storageState: ROLES['contract-manager'].storageStatePath,
+    });
     requesterPage = await requesterContext.newPage();
 
-    // Approver: separate API login → storageState → browser context.
-    const approverApi = await request.newContext();
-    const approverLogin = await approverApi.post(`${BFF_URL}/api/v1/auth/login`, {
-      data: { email: APPROVER_EMAIL, password: APPROVER_PASSWORD },
-    });
-    expect(approverLogin.ok()).toBeTruthy();
     approverContext = await browser.newContext({
-      storageState: await approverApi.storageState(),
+      storageState: ROLES['approver'].storageStatePath,
     });
     approverPage = await approverContext.newPage();
-    await approverApi.dispose();
 
-    // Viewer: same pattern.
-    const viewerApi = await request.newContext();
-    const viewerLogin = await viewerApi.post(`${BFF_URL}/api/v1/auth/login`, {
-      data: { email: VIEWER_EMAIL, password: VIEWER_PASSWORD },
-    });
-    expect(viewerLogin.ok()).toBeTruthy();
     viewerContext = await browser.newContext({
-      storageState: await viewerApi.storageState(),
+      storageState: ROLES['viewer'].storageStatePath,
     });
     viewerPage = await viewerContext.newPage();
-    await viewerApi.dispose();
   });
 
   test.afterAll(async () => {

@@ -45,11 +45,17 @@ export default defineConfig({
     timezoneId: 'Asia/Tokyo',
   },
 
-  // プロジェクト: chromiumのみ（CI向け軽量構成）
+  // プロジェクト: setup (auth storageState 生成) → chromium (通常テスト)
   projects: [
+    {
+      name: 'setup',
+      testMatch: /auth\.setup\.ts/,
+      use: { ...devices['Desktop Chrome'] },
+    },
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+      dependencies: ['setup'],
     },
   ],
 });

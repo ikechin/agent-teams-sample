@@ -318,6 +318,38 @@ Phase 3: E2E Test Agent
 - 新しいgRPC/RESTの設計が必要 → パターン2（段階的）
 - 影響が1サービス内 → パターン3（単一Agent）
 
+**パターン3 (単一 Agent) を選ぶべきケース (2026-04-14 振り返り由来):**
+以下の **いずれか** を満たす場合は Agent Teams を使わず単一 Agent で順次実装する:
+- 変更が **単一サブモジュール内** または **親リポ単体** で完結する
+- 実装フェーズが **依存関係により直列にしか進まない** (並行度ゼロ)
+- 合計工数が **半日以下** の見積もり
+- 新しい gRPC/REST/DB スキーマの追加がない
+
+**実例**: `.steering/20260415-e2e-login-pattern-refactor/` は親リポ `e2e/` のみの refactor で、
+依存が直列 (setup → spec 移行 → 検証) だったため単一 Agent で実装。TeamCreate / DM / ハンドオフの
+オーバーヘッドを避けて 30 分で完了した。Agent Teams では同等の実装に 1 時間以上かかっていた可能性。
+
+**逆に Agent Teams を選ぶべき**のは、パターン1/2 のように 2 つ以上の Agent が独立に並行作業できる
+合意事項 (contract fix など) が存在するとき。
+
+#### 設計段階の実測検証ルール (2026-04-14 振り返り由来)
+
+**design.md で「〜できない」「〜が必要」と断定する箇所は、実装前に実測 1 回で検証すること。**
+
+根拠なき仮説が設計に入り込むと、実装時に覆されて大幅な手戻りが発生する。
+`.steering/20260415-e2e-login-pattern-refactor/` では「BFF origin で取得した session Cookie は
+browser context に転用不可」と design で断定したが、実測 (`cat e2e/.auth/*.json`) で Cookie の
+`domain=localhost` を確認すれば即座に覆せた。
+
+**実測すべき断定の例:**
+- 「API X の Cookie は Y で使えない」→ `cat storageState / curl -I` で確認
+- 「ライブラリ Z は機能 W をサポートしない」→ docs / example を 1 件 grep
+- 「データベース D は制約 C を持つ」→ `\d table` / `SHOW CREATE TABLE`
+- 「既存 API の N+1 を避けるため join が必要」→ 既存クエリを `EXPLAIN`
+
+**ルール**: 設計段階で 5 分以内に検証できる断定は、review-steering で指摘されたら必ず検証する。
+検証できない断定は「仮説」と明示し、実装時の発見により修正される可能性を design.md に明記する。
+
 #### レビュー・修正フェーズのAgent活用
 
 **実装完了後のレビュー・修正もAgentに委任できる。**

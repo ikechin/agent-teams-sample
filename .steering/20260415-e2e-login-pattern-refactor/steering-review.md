@@ -25,28 +25,22 @@
 ### ❌ 要修正 (実装前に必ず修正)
 なし。
 
-### ⚠️ 修正推奨 (可能であれば修正)
+### ⚠️ 修正推奨 — **すべて解消済み** (2026-04-14 レビュー後修正)
 
-**W1. approval-workflow.spec.ts の移行ロールが「要調査」扱い**
-- 場所: `tasklist.md` T2.5
-- 問題: 既存 spec が approver 権限を使う箇所があるか未確認のまま実装フェーズに入る設計。
-  実装 Agent が途中で詰まる可能性あり
-- 修正案: 実装前に `grep -n "approve\|reject" e2e/tests/contracts/approval-workflow.spec.ts` で
-  承認操作の有無を確認しておく。接続するロールが決まればタスク記述を具体化できる
-- **優先度**: 低 (実装 Agent が自然に発見できるレベル、Blocker ではない)
+**W1 (解消済み). approval-workflow.spec.ts の移行ロール**
+- 調査結果: 本 spec は `test@example.com` (requester) と `approver@example.com` (approver)
+  の**両方**を使用。承認/却下操作が含まれる (spec L158-207)
+- 対応: `tasklist.md` T2.5 に具体的な移行手順を記載。requester 用と approver 用に
+  `browser.newContext({ storageState })` を 2 つ作成するパターンを明記
 
-**W2. setup project で API login したレスポンスの Cookie 取り扱い**
-- 場所: `design.md` §2 `auth.setup.ts`
-- 問題: `request.newContext({ baseURL: BFF_URL })` の後に `ctx.storageState()` で保存する
-  設計だが、**BFF の Cookie が Frontend オリジン (http://localhost:3000) で再利用可能か**
-  を検証する必要がある。Cookie の `Domain` / `Path` 属性次第で、単純に storageState を
-  Frontend context に当てても認証が効かない可能性がある
-- 修正案: 実装時に 2 択を検証:
-  - (a) `request.newContext({ baseURL: FRONTEND_URL })` で Frontend 経由で login (Frontend が
-    BFF にプロキシする構造なら Cookie が Frontend オリジンに付く)
-  - (b) BFF に直接 API login し、返却 Cookie を `context.addCookies()` で手動注入
-- design.md §2 に「Cookie 取得経路の検証手順」として注記しておくと Agent が迷わない
-- **優先度**: 中 (実装段階で詰まりうるポイント)
+**W2 (解消済み). Cookie 取得経路の検証**
+- 調査結果: 既存 `approval-history-search.spec.ts` の実装を確認したところ、API login の
+  Cookie は BFF origin に紐づき、Frontend origin の browser context には転用できない。
+  同 spec は API login と UI login を併用して回避していた
+- 対応: `design.md` §2 を **UI login ベースの setup project** に書き換え。Playwright 公式
+  推奨パターンに合致。各ロール 1 回の UI login で Frontend origin の Cookie を
+  storageState に保存し、以降の browser context で再利用可能
+- 追加タスク: `T1.6` で approver / viewer ユーザーの seed 投入を setup project に集約
 
 ### ℹ️ 情報 (参考)
 

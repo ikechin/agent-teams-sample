@@ -21,10 +21,13 @@
   - 環境変数 (TEST_USER_EMAIL / TEST_USER_PASSWORD) フォールバック
   - storageStatePath を `e2e/.auth/<role>.json` で定義
 - [ ] **T1.2** `e2e/tests/auth.setup.ts` 新規作成
-  - Playwright `test as setup` パターンで 3 ロール分の API login → storageState 保存
-  - APIRequestContext (`request.newContext`) で `POST /api/v1/auth/login` を直接叩く
+  - Playwright `test as setup` パターンで 3 ロール分の **UI login** → storageState 保存
+  - `page` fixture で `/login` に遷移 → form 入力 → submit → `waitForURL('**/dashboard**')`
+  - 成功後に `page.context().storageState({ path })` で保存
   - ファイル保存前に `.auth/` ディレクトリを `fs.mkdirSync` で作成
-  - login 失敗時は `expect(response.status()).toBe(200)` で即座に fail
+  - login 失敗時は `waitForURL` のタイムアウトで自然に fail
+  - **注記**: API login ではなく UI login を使う理由は design.md §2 の W2 調査結果を参照
+    (BFF origin で取得した Cookie は Frontend origin の browser context に転用できないため)
 - [ ] **T1.3** `e2e/playwright.config.ts` の `projects` 配列を再編
   - `setup` project を追加 (`testMatch: /auth\.setup\.ts/`)
   - `chromium` project に `dependencies: ['setup']` を追加
@@ -33,6 +36,13 @@
 - [ ] **T1.5** setup project の単発実行確認
   - `npx playwright test --project=setup` で 3 テスト全 pass を確認
   - `e2e/.auth/contract-manager.json` / `approver.json` / `viewer.json` が生成されていること
+
+- [ ] **T1.6** approver / viewer ユーザーの seed 投入を setup project に組み込む
+  - 既存 `approval-history-search.spec.ts` の `ensureApproverUser()` / `ensureViewerUser()`
+    (docker exec + psql INSERT ON CONFLICT DO NOTHING) を `e2e/utils/seed-users.ts` に
+    切り出し、setup project の冒頭で 1 回呼び出す
+  - 既存 spec から該当呼び出しを削除 (approval-history-search.spec.ts も該当)
+  - これで setup 実行時に必要なユーザーが自動で揃う
 
 ### Phase 2: 既存 spec の移行 (1〜1.5h 想定)
 
@@ -48,10 +58,24 @@
 - [ ] **T2.3** `e2e/tests/merchants/merchant-crud.spec.ts` 移行
 - [ ] **T2.4** `e2e/tests/services/service-crud.spec.ts` 移行
 - [ ] **T2.5** `e2e/tests/contracts/approval-workflow.spec.ts` 移行
-  - 複数ロールを使う可能性あり。spec 内の login call を調査し、承認操作があれば
-    `approver` ロール用の context を別途用意
-  - 必要なら `test.describe` を分割 or `browser.newContext({ storageState })` で
-    ロール別 context を切り替える
+  - **調査済み (W1 解決)**: 本 spec は **requester (`test@example.com`) と
+    approver (`approver@example.com`) の両方**を使用。承認/却下操作が含まれる
+    (L158-207 で approver 操作)
+  - 既存の `loginWithRetry()` ヘルパー呼び出しを削除
+  - requester 用と approver 用に browser context を 2 つ作成する:
+    ```ts
+    requesterContext = await browser.newContext({
+      storageState: ROLES['contract-manager'].storageStatePath,
+    });
+    approverContext = await browser.newContext({
+      storageState: ROLES['approver'].storageStatePath,
+    });
+    ```
+  - 各 context から page を取得して既存のテストロジックをそのまま使う
+  - spec 内のローカル定数 `APPROVER_EMAIL` / `APPROVER_PASSWORD` / `REQUESTER_EMAIL` /
+    `REQUESTER_PASSWORD` は setup 側に移行済みのため削除 or 保持は任意
+  - `ensureApproverUser()` / docker exec で approver / viewer ユーザーを投入する
+    ヘルパーは setup project 側に移動するか、spec 側に残すかは実装時判断
 - [ ] **T2.6** `e2e/tests/auth/login-flow.spec.ts` に空 storageState を明示指定
   - `test.use({ storageState: { cookies: [], origins: [] } })` を追加
   - 既存 test は変更不要

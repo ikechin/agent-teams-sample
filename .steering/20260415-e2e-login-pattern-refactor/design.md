@@ -54,12 +54,32 @@ sequenceDiagram
 `system-admin` / `sales` は現行 spec で未使用のため本タスクでは生成しない (必要時に追加可能な設計にしておく)。
 
 ### API login か UI login か
-setup project 内では **API login を優先**:
-- `POST /api/v1/auth/login` を APIRequestContext で叩く → 返却された Cookie を context に適用 → `context.storageState()` で保存
-- UI login より高速かつ rate limit 消費が最小
-- フルスイートで各ロール 1 API call / **合計 3 API calls** に集約
 
-UI login (`page.goto('/login')` 経由) は **使わない** — auth フロー自体は `login-flow.spec.ts` が引き続き検証する。
+**重要な発見 (2026-04-14 レビュー指摘 W2 の調査結果)**:
+既存の `e2e/tests/contracts/approval-history-search.spec.ts` の実装を調査したところ、
+`request.newContext()` で BFF origin (http://localhost:8080) に API login した Cookie は、
+browser context (Frontend origin http://localhost:3000) に自動転用できないことが判明。
+同 spec は API login と browser 用 UI login を**併用**しており、API login は API 呼び出し用、
+browser 用は UI login を別途行っている。
+
+**結論: setup project では UI login を使う** (Playwright 公式推奨パターン)。
+
+```
+各ロール × 1 回 UI login (setup project 内) → storageState 保存
+= 合計 3 UI login
+```
+
+現行 (改修前):
+- 5 spec × 1 UI login (beforeAll) = 5 UI login
+- さらに retry で実質 10 以上になるケースあり
+
+改修後:
+- setup project で 3 UI login のみ
+- 既存 spec は storageState を読むだけなので **UI login ゼロ**
+- フルスイート全体の login 数は定数 3 に固定される
+
+UI login は setup project 内でのみ発生し、通常 spec からは発火しない。
+`login-flow.spec.ts` は auth フロー自体のテストなので従来通り login() を呼ぶ。
 
 ---
 
@@ -139,44 +159,63 @@ export const ROLES: Record<RoleName, RoleCredentials> = {
 
 ### 2. `e2e/tests/auth.setup.ts` (新規)
 
-Playwright test.describe としてロールごとに `test('authenticate as X')` を定義。各 test が
-API login → storageState 保存を行う。
+Playwright 公式推奨の setup project パターン。各 test が `page` fixture で
+**UI login** (page.goto → fill → submit → waitForURL) → `context.storageState()` で保存。
+
+Frontend origin (http://localhost:3000) で browser context を使うので、Cookie は
+Frontend origin にバインドされ、以降 storageState を当てた browser が認証済み状態になる。
 
 ```ts
-import { test as setup, expect, request } from '@playwright/test';
+import { test as setup, expect } from '@playwright/test';
 import { ROLES, RoleName } from '../utils/roles';
 import fs from 'fs';
 import path from 'path';
 
-const BFF_URL = process.env.BFF_URL ?? 'http://localhost:8080';
-
-async function authenticateRole(role: RoleName) {
+async function authenticateRole(role: RoleName, page: import('@playwright/test').Page) {
   const credentials = ROLES[role];
   fs.mkdirSync(path.dirname(credentials.storageStatePath), { recursive: true });
 
-  const ctx = await request.newContext({ baseURL: BFF_URL });
-  const response = await ctx.post('/api/v1/auth/login', {
-    data: { email: credentials.email, password: credentials.password },
-  });
-  expect(response.status(), `login for ${role}`).toBe(200);
+  // Frontend の login 画面を経由して BFF の /api/v1/auth/login を叩き、
+  // セッション Cookie を Frontend origin に付ける
+  await page.goto('/login', { waitUntil: 'domcontentloaded' });
+  await page.fill('[name="email"]', credentials.email);
+  await page.fill('[name="password"]', credentials.password);
+  await page.click('button[type="submit"]');
+  await page.waitForURL('**/dashboard**', { timeout: 20000 });
 
-  // セッション Cookie を storageState に保存
-  await ctx.storageState({ path: credentials.storageStatePath });
-  await ctx.dispose();
+  // Cookie + localStorage を storageState に保存
+  await page.context().storageState({ path: credentials.storageStatePath });
 }
 
-setup('authenticate as contract-manager', async () => {
-  await authenticateRole('contract-manager');
+// approver / viewer ユーザーは Phase 3 以降に docker exec で seed 投入済み。
+// 念のため setup 冒頭で存在確認・投入するヘルパーを流用する (必要なら)
+
+setup('authenticate as contract-manager', async ({ page }) => {
+  await authenticateRole('contract-manager', page);
 });
 
-setup('authenticate as approver', async () => {
-  await authenticateRole('approver');
+setup('authenticate as approver', async ({ page }) => {
+  await authenticateRole('approver', page);
 });
 
-setup('authenticate as viewer', async () => {
-  await authenticateRole('viewer');
+setup('authenticate as viewer', async ({ page }) => {
+  await authenticateRole('viewer', page);
 });
 ```
+
+**なぜ API login ではなく UI login か** (W2 調査結果の記録):
+- `request.newContext({ baseURL: BFF_URL })` で `POST /api/v1/auth/login` を叩いた場合、
+  返却セッション Cookie は BFF origin (http://localhost:8080) に紐づく
+- これを `ctx.storageState()` で保存しても、Frontend origin (http://localhost:3000) で
+  動く browser context には自動転用できない (Cookie 属性が domain mismatch)
+- Playwright 公式の推奨パターンは **browser page 経由の UI login** で storageState を
+  取得する。Frontend 画面の login フォーム submit → 最終的に BFF の session Cookie が
+  Frontend origin にセットされる (Frontend が BFF に proxy / 同一オリジン扱いで動作)
+- このパターンであれば storageState は browser context 間で再利用可能
+- 既存の `approval-history-search.spec.ts` が API login と UI login を併用しているのは、
+  この制約を回避するためのアドホック対処だった
+- setup project では **UI login 1 回 × 3 ロール** に集約することで、rate limit を
+  構造的に解決する
 
 ### 3. `e2e/playwright.config.ts` の project 再編
 
